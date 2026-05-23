@@ -28,6 +28,7 @@ export default function Navbar() {
           <a href="/#about" onClick={() => setIsOpen(false)}>About</a>
           <a href="/#classes" onClick={() => setIsOpen(false)}>Classes</a>
           <a href="/#pricing" onClick={() => setIsOpen(false)}>Pricing</a>
+          <Link to="/member-login" className="nav-link text-accent" onClick={() => setIsOpen(false)}>Member Login</Link>
           <Link to="/login" className="nav-link" onClick={() => setIsOpen(false)}>Staff Login</Link>
           <button className="btn btn-primary nav-cta">Join Now</button>
         </div>

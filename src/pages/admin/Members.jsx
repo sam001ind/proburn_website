@@ -17,6 +17,7 @@ export default function Members() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     role: 'Member',
     plan: 'Basic',
     duration: '30',
@@ -76,6 +77,7 @@ export default function Members() {
     const newMember = {
       memberId: (isStaff ? 'S-' : 'M-') + Math.floor(1000 + Math.random() * 9000),
       name: formData.name,
+      email: formData.email,
       role: formData.role,
       plan: isStaff ? 'N/A' : formData.plan,
       status: 'Active',
@@ -86,7 +88,7 @@ export default function Members() {
     try {
       await addDoc(collection(db, 'members'), newMember);
       setIsModalOpen(false);
-      setFormData({ name: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
+      setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
     } catch (err) {
       alert("Error adding member: " + err.message);
     }
@@ -162,6 +164,10 @@ export default function Members() {
           <div className="form-group">
             <label>Full Name</label>
             <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. John Doe" />
+          </div>
+          <div className="form-group">
+            <label>Email Address</label>
+            <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="e.g. member@email.com" />
           </div>
           <div className="form-group">
             <label>Role</label>

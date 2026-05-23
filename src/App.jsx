@@ -6,6 +6,8 @@ import AdminLayout from './pages/AdminLayout';
 import MemberLayout from './pages/member/MemberLayout';
 import Dashboard from './pages/admin/Dashboard';
 import MemberDashboard from './pages/member/MemberDashboard';
+import MemberAttendance from './pages/member/MemberAttendance';
+import MemberBilling from './pages/member/MemberBilling';
 import Members from './pages/admin/Members';
 import Billing from './pages/admin/Billing';
 import Attendance from './pages/admin/Attendance';
@@ -28,6 +30,8 @@ function App() {
           }>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<MemberDashboard />} />
+            <Route path="attendance" element={<MemberAttendance />} />
+            <Route path="billing" element={<MemberBilling />} />
           </Route>
 
           <Route path="/admin" element={

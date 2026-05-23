@@ -1,9 +1,21 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, LogOut, Settings, CreditCard, Clock } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (err) {
+      console.error("Failed to log out", err);
+    }
+  };
 
   const navItems = [
     { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Overview' },
@@ -33,14 +45,14 @@ export default function AdminLayout() {
               <span>{item.label}</span>
             </Link>
           ))}
+          
+          <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
+            <button className="nav-item" style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }} onClick={handleLogout}>
+              <LogOut size={20} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </nav>
-
-        <div className="sidebar-footer">
-          <Link to="/" className="sidebar-link logout text-red">
-            <LogOut size={20} />
-            <span>Logout / Exit</span>
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content Area */}

@@ -1,5 +1,6 @@
 import { Dumbbell, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -23,10 +24,11 @@ export default function Navbar() {
         </a>
         
         <div className={`nav-menu ${isOpen ? 'active' : ''}`}>
-          <a href="#home" onClick={() => setIsOpen(false)}>Home</a>
-          <a href="#about" onClick={() => setIsOpen(false)}>About</a>
-          <a href="#classes" onClick={() => setIsOpen(false)}>Classes</a>
-          <a href="#pricing" onClick={() => setIsOpen(false)}>Pricing</a>
+          <a href="/#home" onClick={() => setIsOpen(false)}>Home</a>
+          <a href="/#about" onClick={() => setIsOpen(false)}>About</a>
+          <a href="/#classes" onClick={() => setIsOpen(false)}>Classes</a>
+          <a href="/#pricing" onClick={() => setIsOpen(false)}>Pricing</a>
+          <Link to="/login" className="nav-link" onClick={() => setIsOpen(false)}>Staff Login</Link>
           <button className="btn btn-primary nav-cta">Join Now</button>
         </div>
 

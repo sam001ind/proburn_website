@@ -5,7 +5,7 @@ import BoomerangVideoBg from './BoomerangVideoBg';
 export default function Hero() {
   return (
     <section id="home" className="hero-section">
-      <BoomerangVideoBg src="/gym-bg.mp4" />
+      <BoomerangVideoBg src={`${import.meta.env.BASE_URL}gym-bg.mp4`} />
       <div className="hero-overlay"></div>
       <div className="container hero-content animate-fade-in">
         <div className="hero-text">

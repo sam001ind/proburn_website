@@ -22,12 +22,13 @@ export default function Members() {
     role: 'Member',
     plan: 'Basic',
     duration: '30',
-    joined: new Date().toISOString().split('T')[0]
+    joined: new Date().toISOString().split('T')[0],
+    photoURL: ''
   });
 
   const openAddModal = () => {
     setEditingMemberId(null);
-    setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
+    setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '' });
     setIsModalOpen(true);
   };
 
@@ -39,7 +40,8 @@ export default function Members() {
       role: member.role || 'Member',
       plan: member.plan === 'N/A' ? 'Basic' : member.plan,
       duration: member.expiry ? member.expiry.toString() : '30',
-      joined: new Date().toISOString().split('T')[0] // Assuming we don't edit joined date, just reset form picker to today
+      joined: new Date().toISOString().split('T')[0], // Assuming we don't edit joined date, just reset form picker to today
+      photoURL: member.photoURL || ''
     });
     setIsModalOpen(true);
   };
@@ -103,7 +105,8 @@ export default function Members() {
           email: formData.email,
           role: formData.role,
           plan: isStaff ? 'N/A' : formData.plan,
-          expiry: isStaff ? 999 : parseInt(formData.duration)
+          expiry: isStaff ? 999 : parseInt(formData.duration),
+          photoURL: formData.photoURL
         });
       } else {
         const newMember = {
@@ -114,15 +117,27 @@ export default function Members() {
           plan: isStaff ? 'N/A' : formData.plan,
           status: 'Active',
           joined: new Date(formData.joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          expiry: isStaff ? 999 : parseInt(formData.duration)
+          expiry: isStaff ? 999 : parseInt(formData.duration),
+          photoURL: formData.photoURL
         };
         await addDoc(collection(db, 'members'), newMember);
       }
       setIsModalOpen(false);
       setEditingMemberId(null);
-      setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
+      setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '' });
     } catch (err) {
       alert("Error saving member: " + err.message);
+    }
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, photoURL: reader.result });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -167,7 +182,18 @@ export default function Members() {
             ) : members.map((m) => (
               <tr key={m.id}>
                 <td>{m.memberId || m.id.substring(0,6)}</td>
-                <td><strong>{m.name}</strong></td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    {m.photoURL ? (
+                      <img src={m.photoURL} alt="avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {m.name.charAt(0)}
+                      </div>
+                    )}
+                    <strong>{m.name}</strong>
+                  </div>
+                </td>
                 <td>{m.role || 'Member'}</td>
                 <td>
                   {m.plan === 'N/A' ? (
@@ -194,6 +220,21 @@ export default function Members() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingMemberId ? "Edit Person" : "Add New Person"}>
         <form className="modal-form" onSubmit={handleAddMember}>
+          <div className="form-group" style={{ textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+              {formData.photoURL ? (
+                <img src={formData.photoURL} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent)' }} />
+              ) : (
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed rgba(255,255,255,0.2)' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No Photo</span>
+                </div>
+              )}
+            </div>
+            <input type="file" accept="image/*" onChange={handlePhotoUpload} id="photo-upload" style={{ display: 'none' }} />
+            <label htmlFor="photo-upload" style={{ cursor: 'pointer', color: 'var(--accent)', fontSize: '0.9rem', fontWeight: 500 }}>
+              {formData.photoURL ? 'Change Photo' : 'Upload Photo'}
+            </label>
+          </div>
           <div className="form-group">
             <label>Full Name</label>
             <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. John Doe" />

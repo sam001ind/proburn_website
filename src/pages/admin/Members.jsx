@@ -1,7 +1,7 @@
-import { Search, Filter, MoreVertical, Database } from 'lucide-react';
+import { Search, Filter, MoreVertical, Database, Edit2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import Modal from '../../components/Modal';
 import './Admin.css';
@@ -15,6 +15,7 @@ export default function Members() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,6 +24,25 @@ export default function Members() {
     duration: '30',
     joined: new Date().toISOString().split('T')[0]
   });
+
+  const openAddModal = () => {
+    setEditingMemberId(null);
+    setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (member) => {
+    setEditingMemberId(member.id);
+    setFormData({
+      name: member.name,
+      email: member.email || '',
+      role: member.role || 'Member',
+      plan: member.plan === 'N/A' ? 'Basic' : member.plan,
+      duration: member.expiry ? member.expiry.toString() : '30',
+      joined: new Date().toISOString().split('T')[0] // Assuming we don't edit joined date, just reset form picker to today
+    });
+    setIsModalOpen(true);
+  };
 
   // Live Database Listener
   useEffect(() => {
@@ -74,23 +94,35 @@ export default function Members() {
   const handleAddMember = async (e) => {
     e.preventDefault();
     const isStaff = formData.role === 'Staff';
-    const newMember = {
-      memberId: (isStaff ? 'S-' : 'M-') + Math.floor(1000 + Math.random() * 9000),
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      plan: isStaff ? 'N/A' : formData.plan,
-      status: 'Active',
-      joined: new Date(formData.joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      expiry: isStaff ? 999 : parseInt(formData.duration)
-    };
     
     try {
-      await addDoc(collection(db, 'members'), newMember);
+      if (editingMemberId) {
+        const memberRef = doc(db, 'members', editingMemberId);
+        await updateDoc(memberRef, {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          plan: isStaff ? 'N/A' : formData.plan,
+          expiry: isStaff ? 999 : parseInt(formData.duration)
+        });
+      } else {
+        const newMember = {
+          memberId: (isStaff ? 'S-' : 'M-') + Math.floor(1000 + Math.random() * 9000),
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          plan: isStaff ? 'N/A' : formData.plan,
+          status: 'Active',
+          joined: new Date(formData.joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          expiry: isStaff ? 999 : parseInt(formData.duration)
+        };
+        await addDoc(collection(db, 'members'), newMember);
+      }
       setIsModalOpen(false);
+      setEditingMemberId(null);
       setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0] });
     } catch (err) {
-      alert("Error adding member: " + err.message);
+      alert("Error saving member: " + err.message);
     }
   };
 
@@ -104,7 +136,7 @@ export default function Members() {
               <Database size={18} /> Seed Data
             </button>
           )}
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>+ Add Member / Staff</button>
+          <button className="btn btn-primary" onClick={openAddModal}>+ Add Member / Staff</button>
         </div>
       </div>
 
@@ -150,7 +182,8 @@ export default function Members() {
                   </span>
                 </td>
                 <td>{m.joined}</td>
-                <td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="icon-btn" onClick={() => openEditModal(m)}><Edit2 size={18} /></button>
                   <button className="icon-btn"><MoreVertical size={18} /></button>
                 </td>
               </tr>
@@ -159,7 +192,7 @@ export default function Members() {
         </table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Person">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingMemberId ? "Edit Person" : "Add New Person"}>
         <form className="modal-form" onSubmit={handleAddMember}>
           <div className="form-group">
             <label>Full Name</label>
@@ -203,7 +236,7 @@ export default function Members() {
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Save to Database</button>
+            <button type="submit" className="btn btn-primary">{editingMemberId ? "Update Database" : "Save to Database"}</button>
           </div>
         </form>
       </Modal>

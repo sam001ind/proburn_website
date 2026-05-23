@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import Modal from '../../components/Modal';
 import './Admin.css';
 
 export default function Billing() {
@@ -11,6 +12,17 @@ export default function Billing() {
 
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    type: 'Income',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    member: '',
+    category: 'Membership Fee',
+    status: 'Completed'
+  });
 
   // Live Database Listener
   useEffect(() => {
@@ -74,6 +86,27 @@ export default function Billing() {
     }
   };
 
+  const handleAddTransaction = async (e) => {
+    e.preventDefault();
+    const newTx = {
+      transactionId: 'TRX-' + Math.floor(1000 + Math.random() * 9000),
+      date: formData.date,
+      member: formData.member,
+      type: formData.type,
+      amount: '₹' + Number(formData.amount).toLocaleString('en-IN'),
+      status: formData.status,
+      category: formData.category
+    };
+    
+    try {
+      await addDoc(collection(db, 'transactions'), newTx);
+      setIsModalOpen(false);
+      setFormData({ type: 'Income', amount: '', date: new Date().toISOString().split('T')[0], member: '', category: 'Membership Fee', status: 'Completed' });
+    } catch (err) {
+      alert("Error adding transaction: " + err.message);
+    }
+  };
+
   return (
     <div className="members-container animate-fade-in">
       <div className="admin-header">
@@ -84,7 +117,7 @@ export default function Billing() {
               <Database size={18} /> Seed Data
             </button>
           )}
-          <button className="btn btn-primary">+ New Transaction</button>
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>+ New Transaction</button>
         </div>
       </div>
 
@@ -137,6 +170,65 @@ export default function Billing() {
           </tbody>
         </table>
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Transaction">
+        <form className="modal-form" onSubmit={handleAddTransaction}>
+          <div className="form-group">
+            <label>Transaction Type</label>
+            <select value={formData.type} onChange={e => {
+              const type = e.target.value;
+              setFormData({...formData, type, category: type === 'Income' ? 'Membership Fee' : 'Equipment Maintenance' })
+            }}>
+              <option value="Income">Income / Collection</option>
+              <option value="Expense">Expense</option>
+              <option value="Due">Due / Pending</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" required value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} placeholder="e.g. 5000" />
+          </div>
+          <div className="form-group">
+            <label>Member or Vendor Name</label>
+            <input type="text" required value={formData.member} onChange={e => setFormData({...formData, member: e.target.value})} placeholder="e.g. Alex Johnson" />
+          </div>
+          <div className="form-group">
+            <label>Category / Head</label>
+            {formData.type === 'Income' || formData.type === 'Due' ? (
+              <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                <option value="Membership Fee">Membership Fee</option>
+                <option value="PT Session">Personal Training</option>
+                <option value="Merchandise">Merchandise / Supplements</option>
+                <option value="Misc Income">Miscellaneous Income</option>
+              </select>
+            ) : (
+              <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                <option value="Rent">Rent</option>
+                <option value="Salary">Staff Salary</option>
+                <option value="Electricity Bill">Electricity Bill</option>
+                <option value="Equipment Maintenance">Equipment Maintenance</option>
+                <option value="Misc Expense">Miscellaneous Expense</option>
+              </select>
+            )}
+          </div>
+          <div className="form-group">
+            <label>Status</label>
+            <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Date</label>
+            <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Save Transaction</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

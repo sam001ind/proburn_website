@@ -86,37 +86,36 @@ export default function MemberAttendance() {
         </div>
       </div>
 
-      <div className="members-table-container glass-panel">
-        <h3 style={{ padding: '1.5rem', margin: 0, borderBottom: '1px solid var(--border)' }}>Complete Attendance Log</h3>
-        <table className="members-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Action</th>
-              <th>Method</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="4" style={{textAlign: 'center', padding: '2rem'}}>Loading activity...</td></tr>
-            ) : attendance.length === 0 ? (
-              <tr><td colSpan="4" style={{textAlign: 'center', padding: '2rem'}}>No check-ins found. Time to hit the gym!</td></tr>
-            ) : attendance.map((log) => (
-              <tr key={log.id}>
-                <td>{formatDate(log.timestamp)}</td>
-                <td>{formatTime(log.timestamp)}</td>
-                <td>
-                  <span className={`plan-badge ${log.type === 'Check-In' ? 'active' : 'expired'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    {log.type === 'Check-In' ? <LogIn size={12} /> : <LogOut size={12} />}
-                    {log.type}
-                  </span>
-                </td>
-                <td>{log.method}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+        <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+          <Activity size={20} className="text-accent" />
+          Workout History
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading activity...</div>
+          ) : attendance.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No check-ins found. Time to hit the gym!</div>
+          ) : attendance.map((log) => (
+            <div key={log.id} style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: log.type === 'Check-In' ? 'rgba(46, 213, 115, 0.1)' : 'rgba(255, 71, 87, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: log.type === 'Check-In' ? '#2ed573' : '#ff4757' }}>
+                  {log.type === 'Check-In' ? <LogIn size={20} /> : <LogOut size={20} />}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{log.type === 'Check-In' ? 'Gym Check-In' : 'Gym Check-Out'}</h4>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{formatDate(log.timestamp)} at {formatTime(log.timestamp)}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.75rem', padding: '0.3rem 0.8rem', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', color: 'var(--text-secondary)' }}>
+                  {log.method}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

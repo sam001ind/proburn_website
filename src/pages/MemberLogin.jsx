@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, ArrowLeft, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import './Login.css';
 
 export default function MemberLogin() {
@@ -19,6 +20,14 @@ export default function MemberLogin() {
     setLoading(true);
     try {
       if (isRegistering) {
+        // Check if email exists in members collection first
+        const q = query(collection(db, 'members'), where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          throw new Error('unauthorized');
+        }
+
         await createUserWithEmailAndPassword(auth, email, password);
         navigate('/member');
       } else {
@@ -26,7 +35,11 @@ export default function MemberLogin() {
         navigate('/member');
       }
     } catch (err) {
-      setError(isRegistering ? 'Failed to register. Please ensure your password is 6+ characters.' : 'Invalid email or password.');
+      if (err.message === 'unauthorized') {
+        setError("Email not found. Please ask the Admin to add you first.");
+      } else {
+        setError(isRegistering ? 'Failed to register. Please ensure your password is 6+ characters.' : 'Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }

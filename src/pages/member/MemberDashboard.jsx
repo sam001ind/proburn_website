@@ -67,10 +67,11 @@ export default function MemberDashboard() {
     return (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // Calculate BMI
+  // Calculate BMI and Target Weight Range
   let bmi = null;
   let bmiCategory = '';
   let bmiColor = '';
+  let targetWeightRange = '';
   if (profile.height && profile.weight) {
     const hInMeters = parseFloat(profile.height) / 100;
     const wInKg = parseFloat(profile.weight);
@@ -81,6 +82,11 @@ export default function MemberDashboard() {
       else if (bmiVal <= 22.9) { bmiCategory = 'Normal (Indian Standard)'; bmiColor = '#2ed573'; }
       else if (bmiVal <= 24.9) { bmiCategory = 'Overweight'; bmiColor = '#eccc68'; }
       else { bmiCategory = 'Obese'; bmiColor = '#ff4757'; }
+
+      // Calculate Target Weight Range for "Normal" (18.5 - 22.9)
+      const minWeight = (18.5 * (hInMeters * hInMeters)).toFixed(1);
+      const maxWeight = (22.9 * (hInMeters * hInMeters)).toFixed(1);
+      targetWeightRange = `${minWeight} kg - ${maxWeight} kg`;
     }
   }
 
@@ -291,7 +297,7 @@ export default function MemberDashboard() {
 
         {profile.height && profile.weight ? (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
               <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
                 <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.height} cm</p>
@@ -306,6 +312,12 @@ export default function MemberDashboard() {
                 <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor }}>{bmiCategory}</span>
               </div>
             </div>
+
+            {targetWeightRange && (
+              <div style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Target weight for Green (Normal BMI): <strong style={{ color: '#2ed573' }}>{targetWeightRange}</strong>
+              </div>
+            )}
 
             {historyData.length >= 2 && (
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>

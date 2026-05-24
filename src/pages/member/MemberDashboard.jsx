@@ -95,24 +95,34 @@ export default function MemberDashboard() {
     if (profile.weightHistory.length >= 2) {
       const firstWeight = parseFloat(profile.weightHistory[0].weight);
       const lastWeight = parseFloat(profile.weightHistory[profile.weightHistory.length - 1].weight);
-      const diff = (lastWeight - firstWeight).toFixed(1);
+      const weightDiff = (lastWeight - firstWeight).toFixed(1);
+      
+      let bmiDiffStr = "";
+      if (profile.height) {
+        const hInMeters = parseFloat(profile.height) / 100;
+        const firstBmi = parseFloat((firstWeight / (hInMeters * hInMeters)).toFixed(1));
+        const currentBmi = parseFloat(bmi);
+        const bmiDiff = (currentBmi - firstBmi).toFixed(1);
+        if (bmiDiff < 0) bmiDiffStr = ` (BMI dropped by ${Math.abs(bmiDiff)} points)`;
+        else if (bmiDiff > 0) bmiDiffStr = ` (BMI increased by ${bmiDiff} points)`;
+      }
       
       const isUnderweight = bmiCategory === 'Underweight';
       
-      if (diff < 0) {
+      if (weightDiff < 0) {
         if (isUnderweight) {
-          progressDescription = `You've lost ${Math.abs(diff)} kg. Since you are underweight, consider increasing your caloric intake to build mass.`;
+          progressDescription = `You've lost ${Math.abs(weightDiff)} kg${bmiDiffStr}. Since you are underweight, consider increasing your caloric intake to build mass.`;
         } else {
-          progressDescription = `Great progress! You've lost ${Math.abs(diff)} kg since you started tracking. Keep it up!`;
+          progressDescription = `Great progress! You've lost ${Math.abs(weightDiff)} kg since you started tracking${bmiDiffStr}. Keep it up!`;
         }
-      } else if (diff > 0) {
-        if (isUnderweight) {
-          progressDescription = `Awesome! You've gained ${diff} kg. This is great progress towards a healthy weight!`;
+      } else if (weightDiff > 0) {
+        if (isUnderweight || bmiCategory === 'Normal (Indian Standard)') {
+          progressDescription = `Awesome! You've gained ${weightDiff} kg${bmiDiffStr}. This is great progress towards a healthy weight!`;
         } else {
-          progressDescription = `You've gained ${diff} kg since you started tracking. Focus on your workout and diet plans!`;
+          progressDescription = `You've gained ${weightDiff} kg since you started tracking${bmiDiffStr}. Focus on your workout and diet plans!`;
         }
       } else {
-        progressDescription = `Your weight has remained stable since you started tracking.`;
+        progressDescription = `Your weight and BMI have remained stable since you started tracking.`;
       }
     }
   }

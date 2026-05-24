@@ -115,6 +115,9 @@
   background: rgba(255, 68, 68, 0.1);
   color: #ff6b6b;
 }
+.sidebar-link.logout svg {
+  color: #ff4444;
+}
 
 .admin-main {
   flex-grow: 1;
@@ -263,11 +266,6 @@
     background: rgba(255, 69, 0, 0.15);
     box-shadow: none;
     color: var(--accent);
-  }
-
-  /* Log out button container */
-  .sidebar-nav > div {
-    display: none;
   }
 
   .admin-main {

@@ -88,12 +88,10 @@ export default function AdminLayout() {
             </Link>
           ))}
           
-          <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
-            <button className="nav-item" style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }} onClick={handleLogout}>
-              <LogOut size={20} />
-              <span>Log Out</span>
-            </button>
-          </div>
+          <button className="sidebar-link logout" style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }} onClick={handleLogout}>
+            <LogOut size={20} />
+            <span>Log Out</span>
+          </button>
         </nav>
       </aside>
 

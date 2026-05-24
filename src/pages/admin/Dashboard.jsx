@@ -34,7 +34,7 @@ export default function Dashboard() {
           }
         });
       } else {
-        if (currentUser.email === 'admin@gym.com' || currentUser.email === 'abijiththekkekkara@gmail.com') {
+        if (currentUser.email === 'admin@gym.com' || currentUser.email === 'abhijiththirutheri@gmail.com') {
            setUserRoleData({ name: 'Super Admin' });
         }
       }

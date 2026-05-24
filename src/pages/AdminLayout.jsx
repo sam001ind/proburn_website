@@ -36,7 +36,7 @@ export default function AdminLayout() {
         });
       } else {
         // Fallback for default admin account
-        if (currentUser.email === 'admin@gym.com' || currentUser.email === 'abijiththekkekkara@gmail.com') {
+        if (currentUser.email === 'admin@gym.com' || currentUser.email === 'abhijiththirutheri@gmail.com') {
            setUserRoleData({ name: 'Super Admin' });
         }
       }

@@ -45,6 +45,7 @@ export default function MemberLayout() {
     { path: '/member', icon: <User size={20} />, label: 'My Profile' },
     { path: '/member/attendance', icon: <Clock size={20} />, label: 'My Attendance' },
     { path: '/member/billing', icon: <Activity size={20} />, label: 'My Billing' },
+    { path: '/member/health', icon: <Activity size={20} />, label: 'My Health' },
   ];
 
   return (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Trash2, Plus, Settings as SettingsIcon } from 'lucide-react';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy, setDoc } from 'firebase/firestore';
+import { Calendar as CalendarIcon, Trash2, Plus, Settings as SettingsIcon, Target, Save, List } from 'lucide-react';
 import { db } from '../../firebase';
 import './Admin.css';
 
@@ -9,14 +9,33 @@ export default function Settings() {
   const [newDate, setNewDate] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(false);
+  const [gymConfig, setGymConfig] = useState({ targetStreak: 7, plans: [] });
 
   useEffect(() => {
     const q = query(collection(db, 'holidays'), orderBy('date', 'asc'));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const unsubHolidays = onSnapshot(q, (snapshot) => {
       setHolidays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return () => unsub();
+
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'gym_config'), (docSnap) => {
+      if (docSnap.exists()) {
+        setGymConfig(docSnap.data());
+      }
+    });
+
+    return () => { unsubHolidays(); unsubConfig(); };
   }, []);
+
+  const handleUpdateConfig = async () => {
+    setLoading(true);
+    try {
+      await setDoc(doc(db, 'settings', 'gym_config'), gymConfig);
+      alert("Settings saved successfully!");
+    } catch(err) {
+      alert("Error: " + err.message);
+    }
+    setLoading(false);
+  };
 
   const handleAddHoliday = async (e) => {
     e.preventDefault();
@@ -119,6 +138,78 @@ export default function Settings() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <h3 style={{ marginTop: '3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Target className="text-accent" />
+          General Settings
+        </h3>
+        
+        <div style={{ marginBottom: '2rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Target Streak (Days) for Member Confetti Celebration</label>
+          <input 
+            type="number" 
+            value={gymConfig.targetStreak || ''} 
+            onChange={(e) => setGymConfig({...gymConfig, targetStreak: parseInt(e.target.value) || 0})} 
+            style={{ maxWidth: '200px' }}
+          />
+        </div>
+
+        <h3 style={{ marginTop: '3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <List className="text-accent" />
+          Membership Plans
+        </h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+          Define features for your plans. When a member clicks on their plan in the dashboard, these details will appear in a popup.
+        </p>
+
+        {gymConfig.plans?.map((plan, idx) => (
+          <div key={idx} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
+            <input 
+              type="text" 
+              value={plan.name} 
+              onChange={(e) => {
+                const newPlans = [...gymConfig.plans];
+                newPlans[idx].name = e.target.value;
+                setGymConfig({...gymConfig, plans: newPlans});
+              }}
+              placeholder="Plan Name (e.g. Elite)" 
+              style={{ flex: 1 }}
+            />
+            <textarea 
+              value={plan.features} 
+              onChange={(e) => {
+                const newPlans = [...gymConfig.plans];
+                newPlans[idx].features = e.target.value;
+                setGymConfig({...gymConfig, plans: newPlans});
+              }}
+              placeholder="Features (comma separated or multiline)" 
+              style={{ flex: 2, minHeight: '80px', resize: 'vertical' }}
+            />
+            <button 
+              onClick={() => {
+                const newPlans = gymConfig.plans.filter((_, i) => i !== idx);
+                setGymConfig({...gymConfig, plans: newPlans});
+              }}
+              className="icon-btn text-red"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+        ))}
+        
+        <button 
+          onClick={() => setGymConfig({...gymConfig, plans: [...(gymConfig.plans || []), { name: '', features: '' }]})} 
+          className="btn btn-outline" 
+          style={{ marginBottom: '2rem' }}
+        >
+          <Plus size={16} /> Add Plan
+        </button>
+
+        <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
+          <button onClick={handleUpdateConfig} className="btn btn-primary" disabled={loading}>
+            <Save size={18} style={{ marginRight: '0.5rem' }} /> Save Settings
+          </button>
         </div>
       </div>
     </div>

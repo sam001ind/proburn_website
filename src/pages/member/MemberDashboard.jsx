@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { Activity, Calendar, Award, TrendingUp, Flame } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import Modal from '../../components/Modal';
+import confetti from 'canvas-confetti';
 import '../admin/Admin.css';
 
 export default function MemberDashboard() {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [holidays, setHolidays] = useState([]);
+  const [gymConfig, setGymConfig] = useState({ targetStreak: 0, plans: [] });
   const [loading, setLoading] = useState(true);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [hasCelebratedStreak, setHasCelebratedStreak] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -45,7 +52,13 @@ export default function MemberDashboard() {
       setHolidays(snapshot.docs.map(doc => doc.data().date));
     });
 
-    return () => { unsubAtt(); unsubHolidays(); };
+    const unsubConfig = onSnapshot(doc(db, 'settings', 'gym_config'), (docSnap) => {
+      if (docSnap.exists()) {
+        setGymConfig(docSnap.data());
+      }
+    });
+
+    return () => { unsubAtt(); unsubHolidays(); unsubConfig(); };
   }, [profile]);
 
   if (!profile) {
@@ -163,6 +176,23 @@ export default function MemberDashboard() {
     curr.setDate(curr.getDate() - 1);
   }
 
+  // Confetti trigger
+  useEffect(() => {
+    if (streak > 0 && gymConfig.targetStreak > 0 && streak >= gymConfig.targetStreak && !hasCelebratedStreak) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ff7b00', '#ffffff', '#eccc68'],
+        disableForReducedMotion: true
+      });
+      setHasCelebratedStreak(true);
+    }
+  }, [streak, gymConfig.targetStreak, hasCelebratedStreak]);
+
+  // Find plan features
+  const activePlanDetails = gymConfig.plans?.find(p => p.name.toLowerCase() === profile.plan.toLowerCase())?.features || "No specific features configured for this plan.";
+
   return (
     <div className="members-container animate-fade-in">
       <div className="admin-header">
@@ -171,30 +201,30 @@ export default function MemberDashboard() {
       </div>
 
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card interactive-card" onClick={() => setShowPlanModal(true)} style={{ cursor: 'pointer' }}>
           <div className="stat-icon"><Award size={24} className="text-accent" /></div>
           <div className="stat-info">
             <p>My Plan</p>
             <h3>{profile.plan}</h3>
           </div>
         </div>
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card interactive-card" onClick={() => navigate('/member/attendance')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon"><Calendar size={24} className="text-green" /></div>
           <div className="stat-info">
             <p>Joined Date</p>
             <h3>{profile.joined}</h3>
           </div>
         </div>
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card interactive-card" onClick={() => navigate('/member/billing')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon"><Activity size={24} className="text-red" /></div>
           <div className="stat-info">
-            <p>Status</p>
+            <p>Membership Status</p>
             <h3>
               <span className={`status-badge ${profile.status.toLowerCase()}`}>{profile.status}</span>
             </h3>
           </div>
         </div>
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card interactive-card" onClick={() => navigate('/member/attendance?filter=streak')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon"><Flame size={24} style={{ color: '#ff7b00' }} /></div>
           <div className="stat-info">
             <p>Current Streak</p>
@@ -202,6 +232,12 @@ export default function MemberDashboard() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title={`${profile.plan} Plan Details`}>
+        <div style={{ fontSize: '1rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          {activePlanDetails}
+        </div>
+      </Modal>
 
       {historyData.length >= 2 && (
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem' }}>

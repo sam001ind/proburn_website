@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Activity, Calendar, Award } from 'lucide-react';
+import { Activity, Calendar, Award, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
+import Modal from '../../components/Modal';
 import '../admin/Admin.css';
 
 export default function MemberDashboard() {
@@ -116,17 +117,58 @@ export default function MemberDashboard() {
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
             <Activity size={20} className="text-accent" />
             Health Analytics
+            <Info size={18} className="text-secondary" style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => setShowBmiInfo(true)} />
           </h3>
-          <button onClick={() => setShowBmiInfo(!showBmiInfo)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', padding: '0.4rem 0.8rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem' }}>
-            {showBmiInfo ? 'Hide Info' : 'What is this?'}
-          </button>
         </div>
 
-        {showBmiInfo && (
-          <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-primary)', borderLeft: '4px solid var(--accent)' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--accent)' }}>Understanding Your BMI</h4>
-            <p style={{ margin: '0 0 0.5rem 0', lineHeight: 1.5 }}><strong>Body Mass Index (BMI)</strong> is calculated by dividing your weight in kilograms by the square of your height in meters (kg/m²).</p>
-            <p style={{ margin: '0 0 0.5rem 0', lineHeight: 1.5 }}>We use the <strong>Indian Medical Guidelines</strong> which are stricter than global standards due to higher health risks at lower weights:</p>
+        <Modal isOpen={showBmiInfo} onClose={() => setShowBmiInfo(false)} title="Understanding Your BMI">
+          <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 1rem 0' }}><strong>Body Mass Index (BMI)</strong> is calculated by dividing your weight in kilograms by the square of your height in meters (kg/m²).</p>
+            <p style={{ margin: '0 0 1.5rem 0' }}>We use the <strong>Indian Medical Guidelines</strong> which are stricter than global standards due to higher health risks at lower weights.</p>
+            
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                <span style={{ color: '#ffb142' }}>Under</span>
+                <span style={{ color: '#2ed573' }}>Normal</span>
+                <span style={{ color: '#eccc68' }}>Over</span>
+                <span style={{ color: '#ff4757' }}>Obese</span>
+              </div>
+              
+              <div style={{ position: 'relative', width: '100%', height: '24px', borderRadius: '12px', display: 'flex', overflow: 'hidden' }}>
+                <div style={{ width: '17.5%', backgroundColor: '#ffb142' }} title="Underweight" />
+                <div style={{ width: '22.5%', backgroundColor: '#2ed573' }} title="Normal" />
+                <div style={{ width: '10%', backgroundColor: '#eccc68' }} title="Overweight" />
+                <div style={{ width: '50%', backgroundColor: '#ff4757' }} title="Obese" />
+                
+                {bmi && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: `${Math.min(Math.max(((parseFloat(bmi) - 15) / 20) * 100, 5), 95)}%`, 
+                    width: '4px', 
+                    height: '100%', 
+                    background: '#fff', 
+                    boxShadow: '0 0 4px rgba(0,0,0,0.8)',
+                    transform: 'translateX(-50%)'
+                  }} />
+                )}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                 <span>15</span>
+                 <span>18.5</span>
+                 <span>23</span>
+                 <span>25</span>
+                 <span>35+</span>
+              </div>
+              
+              {bmi && (
+                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <p style={{ margin: 0, fontSize: '0.9rem' }}>Your Current BMI: <strong style={{ color: bmiColor, fontSize: '1.2rem' }}>{bmi}</strong></p>
+                  <p style={{ margin: '0.25rem 0 0 0', color: bmiColor, fontWeight: 'bold' }}>{bmiCategory}</p>
+                </div>
+              )}
+            </div>
+
             <ul style={{ margin: 0, paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
               <li><strong>Under 18.5:</strong> Underweight</li>
               <li><strong>18.5 - 22.9:</strong> Normal / Healthy</li>
@@ -134,7 +176,7 @@ export default function MemberDashboard() {
               <li><strong>25.0+:</strong> Obese</li>
             </ul>
           </div>
-        )}
+        </Modal>
 
         {profile.height && profile.weight ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center' }}>

@@ -189,7 +189,7 @@ export default function MemberDashboard() {
         <p style={{ color: 'var(--text-muted)' }}>Member ID: {profile.memberId}</p>
       </div>
 
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         <div className="stat-card glass-card">
           <div className="stat-icon"><Award size={24} className="text-accent" /></div>
           <div className="stat-info">
@@ -216,13 +216,13 @@ export default function MemberDashboard() {
       </div>
 
       <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', whiteSpace: 'nowrap' }}>
             <Activity size={20} className="text-accent" />
             Health Analytics
             <Info size={18} className="text-secondary" style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => setShowBmiInfo(true)} />
           </h3>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <button onClick={() => setShowLogModal(true)} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Plus size={16} /> Log Weight
             </button>
@@ -304,7 +304,7 @@ export default function MemberDashboard() {
 
         {profile.height && profile.weight ? (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
               <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
                 <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.height} cm</p>
@@ -379,7 +379,7 @@ export default function MemberDashboard() {
 
       <div className="members-table-container glass-panel">
         <h3 style={{ padding: '1.5rem', margin: 0, borderBottom: '1px solid var(--border)' }}>Recent Gym Activity</h3>
-        <table className="members-table">
+        <table className="admin-table">
           <thead>
             <tr>
               <th>Date & Time</th>

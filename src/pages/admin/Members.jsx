@@ -266,6 +266,32 @@ export default function Members() {
               <input type="number" step="0.1" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} placeholder="e.g. 70.5" />
             </div>
           </div>
+          {formData.height && formData.weight && parseFloat(formData.height) > 0 && (
+            (() => {
+              const hInMeters = parseFloat(formData.height) / 100;
+              const wInKg = parseFloat(formData.weight);
+              const bmi = (wInKg / (hInMeters * hInMeters)).toFixed(1);
+              const bmiVal = parseFloat(bmi);
+              let bmiCategory = '';
+              let bmiColor = '';
+              if (bmiVal < 18.5) { bmiCategory = 'Underweight'; bmiColor = '#ffb142'; }
+              else if (bmiVal <= 22.9) { bmiCategory = 'Normal (Indian Standard)'; bmiColor = '#2ed573'; }
+              else if (bmiVal <= 24.9) { bmiCategory = 'Overweight'; bmiColor = '#eccc68'; }
+              else { bmiCategory = 'Obese'; bmiColor = '#ff4757'; }
+              
+              return (
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: `1px solid ${bmiColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Calculated BMI</p>
+                    <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: bmiColor }}>{bmi}</p>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', padding: '0.3rem 0.8rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor, fontWeight: 'bold' }}>
+                    {bmiCategory}
+                  </span>
+                </div>
+              );
+            })()
+          )}
           <div className="form-group">
             <label>Role</label>
             <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>

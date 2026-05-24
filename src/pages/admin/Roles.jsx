@@ -1,4 +1,4 @@
-import { Shield, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -39,11 +39,20 @@ export default function Roles() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState(null);
+  const [expandedNodes, setExpandedNodes] = useState(['dashboard']); // Auto-expand dashboard by default
   const [formData, setFormData] = useState({
     name: '',
     menus: [],
     widgets: []
   });
+
+  const toggleNode = (nodeId) => {
+    if (expandedNodes.includes(nodeId)) {
+      setExpandedNodes(expandedNodes.filter(id => id !== nodeId));
+    } else {
+      setExpandedNodes([...expandedNodes, nodeId]);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'roles'), (snapshot) => {
@@ -221,21 +230,39 @@ export default function Roles() {
 
           <div className="form-group" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
             <label style={{ marginTop: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>Menu & Sub-Menu Permissions</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {PERMISSION_TREE.map(menu => (
-                <div key={menu.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.menus.includes(menu.id)} 
-                      onChange={(e) => handleTreeCheckbox(menu, e.target.checked)} 
-                      style={{ transform: 'scale(1.2)' }}
-                    />
-                    {menu.label}
-                  </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {PERMISSION_TREE.map(menu => {
+                const hasChildren = menu.children && menu.children.length > 0;
+                const isExpanded = expandedNodes.includes(menu.id);
+                
+                return (
+                <div key={menu.id} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.75rem', gap: '0.5rem' }}>
+                    {hasChildren ? (
+                      <button 
+                        type="button" 
+                        onClick={() => toggleNode(menu.id)} 
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                      >
+                        {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                      </button>
+                    ) : (
+                      <div style={{ width: '18px' }} /> /* Placeholder for alignment */
+                    )}
+                    
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.menus.includes(menu.id)} 
+                        onChange={(e) => handleTreeCheckbox(menu, e.target.checked)} 
+                        style={{ transform: 'scale(1.2)' }}
+                      />
+                      {menu.label}
+                    </label>
+                  </div>
                   
-                  {menu.children && menu.children.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem', marginLeft: '1.8rem', paddingLeft: '1rem', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>
+                  {hasChildren && isExpanded && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', padding: '0.5rem 1rem 1rem 2.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' }}>
                       {menu.children.map(widget => (
                         <label key={widget.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
                           <input 
@@ -249,7 +276,7 @@ export default function Roles() {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 

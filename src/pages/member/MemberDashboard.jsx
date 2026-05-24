@@ -10,6 +10,7 @@ export default function MemberDashboard() {
   const [profile, setProfile] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showBmiInfo, setShowBmiInfo] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -110,12 +111,32 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {profile.height && profile.weight && (
-        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem' }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+      <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
             <Activity size={20} className="text-accent" />
             Health Analytics
           </h3>
+          <button onClick={() => setShowBmiInfo(!showBmiInfo)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', padding: '0.4rem 0.8rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem' }}>
+            {showBmiInfo ? 'Hide Info' : 'What is this?'}
+          </button>
+        </div>
+
+        {showBmiInfo && (
+          <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-primary)', borderLeft: '4px solid var(--accent)' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--accent)' }}>Understanding Your BMI</h4>
+            <p style={{ margin: '0 0 0.5rem 0', lineHeight: 1.5 }}><strong>Body Mass Index (BMI)</strong> is calculated by dividing your weight in kilograms by the square of your height in meters (kg/m²).</p>
+            <p style={{ margin: '0 0 0.5rem 0', lineHeight: 1.5 }}>We use the <strong>Indian Medical Guidelines</strong> which are stricter than global standards due to higher health risks at lower weights:</p>
+            <ul style={{ margin: 0, paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
+              <li><strong>Under 18.5:</strong> Underweight</li>
+              <li><strong>18.5 - 22.9:</strong> Normal / Healthy</li>
+              <li><strong>23.0 - 24.9:</strong> Overweight</li>
+              <li><strong>25.0+:</strong> Obese</li>
+            </ul>
+          </div>
+        )}
+
+        {profile.height && profile.weight ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center' }}>
             <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
@@ -126,13 +147,18 @@ export default function MemberDashboard() {
               <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.weight} kg</p>
             </div>
             <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: `1px solid ${bmiColor}` }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>BMI</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Current BMI</p>
               <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 0.5rem 0', color: bmiColor }}>{bmi}</p>
               <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor }}>{bmiCategory}</span>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Your height and weight haven't been added yet.</p>
+            <p style={{ color: 'var(--accent)', fontWeight: 'bold', margin: '0.5rem 0 0 0' }}>Ask the admin/front desk to update your profile to unlock Health Analytics!</p>
+          </div>
+        )}
+      </div>
 
       <div className="members-table-container glass-panel">
         <h3 style={{ padding: '1.5rem', margin: 0, borderBottom: '1px solid var(--border)' }}>Recent Gym Activity</h3>

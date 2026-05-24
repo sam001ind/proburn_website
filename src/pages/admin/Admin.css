@@ -13,16 +13,16 @@
 /* Dashboard Stats */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .stat-card {
-  padding: 1.5rem;
+  padding: 1.2rem;
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  gap: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -33,23 +33,26 @@
 
 .stat-icon {
   background: rgba(255, 255, 255, 0.05);
-  padding: 1.2rem;
+  padding: 1rem;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.stat-info h3 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
-
 .stat-info p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
 }
 
 /* Color Utilities for Icons */

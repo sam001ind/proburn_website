@@ -117,8 +117,8 @@ export default function Dashboard() {
           >
             <div className="stat-icon">{stat.icon}</div>
             <div className="stat-info">
-              <h3>{stat.value}</h3>
               <p>{stat.label}</p>
+              <h3>{stat.value}</h3>
             </div>
           </div>
         ))}

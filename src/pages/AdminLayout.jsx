@@ -60,6 +60,7 @@ export default function AdminLayout() {
     { id: 'attendance', path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance' },
     { id: 'billing', path: '/admin/billing', icon: <CreditCard size={20} />, label: 'Billing' },
     { id: 'roles', path: '/admin/roles', icon: <Shield size={20} />, label: 'Roles' },
+    { id: 'settings', path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
   ];
 
   // RBAC Filtering logic for sidebar

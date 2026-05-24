@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Activity, Calendar, Award, TrendingUp } from 'lucide-react';
+import { Activity, Calendar, Award, TrendingUp, Flame } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -10,6 +10,7 @@ export default function MemberDashboard() {
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +40,12 @@ export default function MemberDashboard() {
       setAttendance(logs);
       setLoading(false);
     });
-    return () => unsubAtt();
+
+    const unsubHolidays = onSnapshot(collection(db, 'holidays'), (snapshot) => {
+      setHolidays(snapshot.docs.map(doc => doc.data().date));
+    });
+
+    return () => { unsubAtt(); unsubHolidays(); };
   }, [profile]);
 
   if (!profile) {
@@ -120,6 +126,43 @@ export default function MemberDashboard() {
     }
   }
 
+  // Calculate Streak
+  const getLocalYYYYMMDD = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const checkInDates = new Set();
+  attendance.forEach(log => {
+    if (log.type === 'Check-In' && log.timestamp) {
+      const d = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+      checkInDates.add(getLocalYYYYMMDD(d));
+    }
+  });
+
+  const holidayDates = new Set(holidays);
+
+  let streak = 0;
+  let curr = new Date();
+  for (let i = 0; i < 365; i++) {
+    const dateStr = getLocalYYYYMMDD(curr);
+    if (checkInDates.has(dateStr)) {
+      streak++;
+    } else {
+      if (i === 0) {
+        // Today not attended yet. Do not break streak.
+      } else if (holidayDates.has(dateStr)) {
+        // Holiday not attended. Do not break streak.
+      } else {
+        // Missed a regular day. Break streak.
+        break;
+      }
+    }
+    curr.setDate(curr.getDate() - 1);
+  }
+
   return (
     <div className="members-container animate-fade-in">
       <div className="admin-header">
@@ -131,24 +174,31 @@ export default function MemberDashboard() {
         <div className="stat-card glass-card">
           <div className="stat-icon"><Award size={24} className="text-accent" /></div>
           <div className="stat-info">
-            <h3>My Plan</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{profile.plan}</p>
+            <p>My Plan</p>
+            <h3>{profile.plan}</h3>
           </div>
         </div>
         <div className="stat-card glass-card">
           <div className="stat-icon"><Calendar size={24} className="text-green" /></div>
           <div className="stat-info">
-            <h3>Joined Date</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{profile.joined}</p>
+            <p>Joined Date</p>
+            <h3>{profile.joined}</h3>
           </div>
         </div>
         <div className="stat-card glass-card">
           <div className="stat-icon"><Activity size={24} className="text-red" /></div>
           <div className="stat-info">
-            <h3>Status</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+            <p>Status</p>
+            <h3>
               <span className={`status-badge ${profile.status.toLowerCase()}`}>{profile.status}</span>
-            </p>
+            </h3>
+          </div>
+        </div>
+        <div className="stat-card glass-card">
+          <div className="stat-icon"><Flame size={24} style={{ color: '#ff7b00' }} /></div>
+          <div className="stat-info">
+            <p>Current Streak</p>
+            <h3>{streak} {streak === 1 ? 'Day' : 'Days'}</h3>
           </div>
         </div>
       </div>

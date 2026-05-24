@@ -15,12 +15,12 @@
 .modal-container {
   width: 90%;
   max-width: 500px;
-  background: var(--surface);
+  background: var(--bg-secondary);
   border-radius: 16px;
   padding: 0;
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
 }
 
 .modal-header {
@@ -28,7 +28,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .modal-header h2 {
@@ -38,12 +38,12 @@
 }
 
 .close-btn {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   transition: color 0.2s;
 }
 
 .close-btn:hover {
-  color: var(--text);
+  color: var(--text-primary);
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -68,7 +68,7 @@
 
 .form-group label {
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -76,9 +76,9 @@
 .form-group select {
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 1rem;
   transition: all 0.2s;
@@ -87,7 +87,7 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--accent);
   background: rgba(255, 255, 255, 0.1);
 }
 

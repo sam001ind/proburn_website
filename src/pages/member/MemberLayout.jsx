@@ -1,16 +1,18 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { User, Calendar, LogOut, Clock, Activity, Dumbbell } from 'lucide-react';
+import { User, LogOut, Clock, Activity, Dumbbell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
-import '../AdminLayout.css'; 
+import useBranding from '../../hooks/useBranding';
+import './MemberLayout.css';
 
 export default function MemberLayout() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location   = useLocation();
+  const navigate   = useNavigate();
   const { currentUser } = useAuth();
+  const branding   = useBranding();
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
@@ -49,55 +51,67 @@ export default function MemberLayout() {
   ];
 
   return (
-    <div className="admin-layout" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}>
-      {/* Sidebar Navigation */}
-      <aside className="admin-sidebar glass-panel">
-        <div className="sidebar-header" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0' }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px 0', fontSize: '1.5rem' }}>
-            PRO<span className="text-accent">BURN</span> <Dumbbell className="text-accent" size={24} />
+    <div className="member-layout" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}>
+      
+      {/* Top Bar */}
+      <header className="member-topbar glass-panel">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          {branding.logoURL ? (
+            <img
+              src={branding.logoURL}
+              alt={branding.gymName}
+              style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.12)' }}
+            />
+          ) : (
+            <Dumbbell size={20} style={{ color: branding.brandColor || 'var(--accent)' }} />
+          )}
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-0.3px' }}>
+            {(() => {
+              const full = branding.gymName || 'PROBURN';
+              const hi   = branding.gymNameHighlight || 'BURN';
+              const idx  = full.toUpperCase().indexOf(hi.toUpperCase());
+              if (idx === -1) return <span style={{ color: branding.brandColor || 'var(--accent)' }}>{full}</span>;
+              return <>{full.slice(0, idx)}<span style={{ color: branding.brandColor || 'var(--accent)' }}>{full.slice(idx, idx + hi.length)}</span>{full.slice(idx + hi.length)}</>;
+            })()}
           </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase' }}>Member Portal</span>
         </div>
+
+        <div className="topbar-user">
+          <span className="member-name-text" style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+            {fullName}
+          </span>
+          {profile?.photoUrl ? (
+            <img src={profile.photoUrl} alt="Avatar" className="avatar" style={{ objectFit: 'cover', width: '32px', height: '32px' }} />
+          ) : (
+            <div className="avatar" style={{ background: branding.brandColor || 'var(--accent)', width: '32px', height: '32px', fontSize: '12px' }}>{initials}</div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="member-content">
+        <Outlet />
+      </div>
+
+      {/* Bottom Navigation */}
+      <nav className="member-bottom-nav">
+        {navItems.map((item) => (
+          <Link 
+            key={item.path} 
+            to={item.path}
+            className={`member-nav-link ${location.pathname === item.path ? 'active' : ''}`}
+          >
+            {item.icon}
+            <span>{item.label.replace('My ', '')}</span>
+          </Link>
+        ))}
         
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <Link 
-              key={item.path} 
-              to={item.path}
-              className={`sidebar-link ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-          
-          <button className="sidebar-link logout" style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }} onClick={handleLogout}>
-            <LogOut size={20} />
-            <span>Log Out</span>
-          </button>
-        </nav>
-      </aside>
+        <button className="member-logout-btn" onClick={handleLogout}>
+          <LogOut size={20} />
+          <span>Log Out</span>
+        </button>
+      </nav>
 
-      {/* Main Content Area */}
-      <main className="admin-main">
-        <header className="admin-topbar glass-panel">
-          <div className="topbar-search">
-            <h3 style={{ margin: 0, color: 'var(--text-muted)' }}>Welcome, {firstName}!</h3>
-          </div>
-          <div className="topbar-user">
-            {profile?.photoUrl ? (
-              <img src={profile.photoUrl} alt="Avatar" className="avatar" style={{ objectFit: 'cover' }} />
-            ) : (
-              <div className="avatar" style={{ background: 'var(--accent)' }}>{initials}</div>
-            )}
-            <span>{fullName}</span>
-          </div>
-        </header>
-
-        <div className="admin-content">
-          <Outlet />
-        </div>
-      </main>
     </div>
   );
 }

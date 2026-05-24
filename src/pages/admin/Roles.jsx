@@ -1,4 +1,4 @@
-import { Shield, Plus, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -28,9 +28,12 @@ const PERMISSION_TREE = [
     ]
   },
   { id: 'members', label: 'Member Management (Main Menu)', type: 'menu', children: [] },
+  { id: 'staff', label: 'Staff Management (Main Menu)', type: 'menu', children: [] },
   { id: 'billing', label: 'Billing & Payments (Main Menu)', type: 'menu', children: [] },
   { id: 'attendance', label: 'Attendance (Main Menu)', type: 'menu', children: [] },
-  { id: 'roles', label: 'Role Management (Main Menu)', type: 'menu', children: [] }
+  { id: 'homepage', label: 'Homepage Editor (Main Menu)', type: 'menu', children: [] },
+  { id: 'roles', label: 'Role Management (Main Menu)', type: 'menu', children: [] },
+  { id: 'settings', label: 'Settings (Holidays/Streaks)', type: 'menu', children: [] }
 ];
 
 export default function Roles() {
@@ -42,6 +45,7 @@ export default function Roles() {
   const [expandedNodes, setExpandedNodes] = useState(['dashboard']); // Auto-expand dashboard by default
   const [formData, setFormData] = useState({
     name: '',
+    maxUsers: '',
     menus: [],
     widgets: []
   });
@@ -89,7 +93,7 @@ export default function Roles() {
 
   const openAddModal = () => {
     setEditingRoleId(null);
-    setFormData({ name: '', menus: [], widgets: [] });
+    setFormData({ name: '', maxUsers: '', menus: [], widgets: [] });
     setIsModalOpen(true);
   };
 
@@ -97,6 +101,18 @@ export default function Roles() {
     setEditingRoleId(role.id);
     setFormData({
       name: role.name,
+      maxUsers: role.maxUsers || '',
+      menus: role.permissions?.menus || [],
+      widgets: role.permissions?.widgets || []
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDuplicate = (role) => {
+    setEditingRoleId(null);
+    setFormData({
+      name: role.name + ' (Copy)',
+      maxUsers: role.maxUsers || '',
       menus: role.permissions?.menus || [],
       widgets: role.permissions?.widgets || []
     });
@@ -111,15 +127,19 @@ export default function Roles() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (formData.name.toLowerCase() === 'super admin') {
+    const isSuperAdminEdit = editingRoleId && roles.find(r => r.id === editingRoleId)?.name === 'Super Admin';
+
+    if (formData.name.toLowerCase() === 'super admin' && !isSuperAdminEdit) {
       alert('The "Super Admin" role is a system reserved name. Please choose a different name.');
       return;
     }
 
     try {
+      const maxUsersInt = formData.maxUsers ? parseInt(formData.maxUsers) : 0;
       if (editingRoleId) {
         await updateDoc(doc(db, 'roles', editingRoleId), {
           name: formData.name,
+          maxUsers: maxUsersInt,
           permissions: {
             menus: formData.menus,
             widgets: formData.widgets
@@ -128,6 +148,7 @@ export default function Roles() {
       } else {
         await addDoc(collection(db, 'roles'), {
           name: formData.name,
+          maxUsers: maxUsersInt,
           permissions: {
             menus: formData.menus,
             widgets: formData.widgets
@@ -156,10 +177,15 @@ export default function Roles() {
     }
   };
 
+  const isSuperAdminEditing = editingRoleId && roles.find(r => r.id === editingRoleId)?.name === 'Super Admin';
+
   return (
-    <div className="members-container animate-fade-in">
-      <div className="admin-header">
-        <h1>Role Management</h1>
+    <div className="admin-container animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="admin-header" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', margin: 0 }}>
+          <Shield size={28} className="text-accent" />
+          Role Management
+        </h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
           {!roles.find(r => r.name === 'Super Admin') && (
              <button className="btn btn-outline" onClick={seedSuperAdmin}>
@@ -170,11 +196,12 @@ export default function Roles() {
         </div>
       </div>
 
-      <div className="members-table-container glass-panel">
+      <div className="table-responsive">
         <table className="admin-table">
           <thead>
             <tr>
               <th>Role Name</th>
+              <th>User Limit</th>
               <th>Menu Access</th>
               <th>Widget Access</th>
               <th>Actions</th>
@@ -186,6 +213,11 @@ export default function Roles() {
             ) : roles.map((r) => (
               <tr key={r.id}>
                 <td><strong>{r.name}</strong></td>
+                <td>
+                  <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                    {r.name === 'Super Admin' ? 'Unlimited' : (r.maxUsers ? r.maxUsers : 'Unlimited')}
+                  </span>
+                </td>
                 <td>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                     {r.name === 'Super Admin' ? <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'rgba(255,69,0,0.2)', color: 'var(--accent)', borderRadius: '10px' }}>Full Access</span> : 
@@ -205,27 +237,32 @@ export default function Roles() {
                   </div>
                 </td>
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  {r.name !== 'Super Admin' && (
-                    <>
-                      <button className="icon-btn" onClick={() => openEditModal(r)}><Edit2 size={18} /></button>
-                      <button className="icon-btn" onClick={() => handleDelete(r.id)}><Trash2 size={18} className="text-red" /></button>
-                    </>
-                  )}
+                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                    <button className="icon-btn" onClick={() => openEditModal(r)} title="Edit Role"><Edit2 size={18} /></button>
+                    <button className="icon-btn" onClick={() => handleDuplicate(r)} title="Duplicate Role"><Copy size={18} /></button>
+                    {r.name !== 'Super Admin' && (
+                      <button className="icon-btn" onClick={() => handleDelete(r.id)} title="Delete Role"><Trash2 size={18} className="text-red" /></button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
             {roles.length === 0 && !loading && (
-              <tr><td colSpan="4" style={{textAlign: 'center', padding: '2rem'}}>No custom roles created yet.</td></tr>
+              <tr><td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>No custom roles created yet.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingRoleId ? "Edit Role" : "Create New Role"}>
-        <form className="modal-form" onSubmit={handleSave}>
+        <form className="modal-form" onSubmit={handleSave} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div className="form-group">
             <label>Role Name</label>
-            <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Trainer, Front Desk" />
+            <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Trainer, Front Desk" disabled={isSuperAdminEditing} />
+          </div>
+          <div className="form-group">
+            <label>Max Allowed Users (Leave blank for unlimited)</label>
+            <input type="number" min="1" value={formData.maxUsers} onChange={e => setFormData({...formData, maxUsers: e.target.value})} placeholder="e.g. 5" />
           </div>
 
           <div className="form-group" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
@@ -280,7 +317,7 @@ export default function Roles() {
             </div>
           </div>
 
-          <div className="form-actions">
+          <div className="form-actions" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)' }}>
             <button type="button" className="btn btn-outline" onClick={() => setIsModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn btn-primary">{editingRoleId ? "Update Role" : "Create Role"}</button>
           </div>

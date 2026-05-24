@@ -1,196 +1,256 @@
-import { Fingerprint, LogIn, LogOut, Clock, Search, Timer } from 'lucide-react';
+import { Fingerprint, LogIn, LogOut, Clock, Search, Timer, Users, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
+import { collection, onSnapshot, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useBranch } from '../../context/BranchContext';
 import './Admin.css';
+import './Attendance.css';
 
 export default function Attendance() {
   const [searchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
 
-  const [attendance, setAttendance] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [attendance, setAttendance]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  
+  const { globalSearchTerm } = useOutletContext() || { globalSearchTerm: '' };
+  const [localSearchTerm, setLocalSearchTerm]           = useState('');
+  const { activeBranch } = useBranch();
 
-  // Live Database Listener
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'attendance'), (snapshot) => {
-      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort by timestamp descending
+    if (!activeBranch) {
+      setAttendance([]);
+      setLoading(false);
+      return;
+    }
+    const qAtt = query(collection(db, 'attendance'), where('branchId', '==', activeBranch.id));
+    const unsub = onSnapshot(qAtt, (snap) => {
+      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       logs.sort((a, b) => {
-        const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
-        const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
-        return timeB - timeA;
+        const tA = a.timestamp?.toMillis?.() ?? 0;
+        const tB = b.timestamp?.toMillis?.() ?? 0;
+        return tB - tA;
       });
       setAttendance(logs);
       setLoading(false);
     });
-    return () => unsubscribe();
-  }, []);
+    return () => unsub();
+  }, [activeBranch]);
 
-  const simulateBiometricScan = async () => {
-    const randomMembers = ['Alex Johnson', 'Sarah Williams', 'Mike Chen', 'Emily Davis'];
-    const memberName = randomMembers[Math.floor(Math.random() * randomMembers.length)];
-    const types = ['Check-In', 'Check-Out'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    
+  const simulateScan = async () => {
+    if (!activeBranch) return;
+    const names = ['Alex Johnson', 'Sarah Williams', 'Mike Chen', 'Emily Davis'];
     await addDoc(collection(db, 'attendance'), {
-      memberId: 'M-' + Math.floor(1000 + Math.random() * 9000),
-      memberName: memberName,
-      type: type,
-      timestamp: serverTimestamp(),
-      method: 'Biometric Scanner 1'
+      memberId:   'M-' + Math.floor(1000 + Math.random() * 9000),
+      memberName: names[Math.floor(Math.random() * names.length)],
+      type:       Math.random() > 0.5 ? 'Check-In' : 'Check-Out',
+      timestamp:  serverTimestamp(),
+      method:     'Biometric Scanner 1',
+      branchId:   activeBranch.id
     });
   };
 
   const manualCheckIn = async () => {
-    const name = prompt("Enter Member Name to Check-In:");
+    if (!activeBranch) return;
+    const name = prompt('Enter Member Name to Check-In:');
     if (!name) return;
     await addDoc(collection(db, 'attendance'), {
-      memberId: 'Manual-' + Math.floor(1000 + Math.random() * 9000),
+      memberId:   'Manual-' + Math.floor(1000 + Math.random() * 9000),
       memberName: name,
-      type: 'Check-In',
-      timestamp: serverTimestamp(),
-      method: 'Manual Entry'
+      type:       'Check-In',
+      timestamp:  serverTimestamp(),
+      method:     'Manual Entry',
+      branchId:   activeBranch.id
     });
   };
 
-  // Calculate active members
-  const activeMembersMap = new Map();
-  // Sort oldest to newest to correctly replay events and find current state
-  const sortedForActive = [...attendance].sort((a, b) => {
-    const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
-    const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
-    return timeA - timeB;
-  });
-
-  sortedForActive.forEach(log => {
-    if (log.type === 'Check-In') {
-      activeMembersMap.set(log.memberId, log);
-    } else if (log.type === 'Check-Out') {
-      activeMembersMap.delete(log.memberId);
-    }
-  });
-
-  const activeMembersList = Array.from(activeMembersMap.values());
+  /* Active members */
+  const activeMap = new Map();
+  [...attendance]
+    .sort((a, b) => (a.timestamp?.toMillis?.() ?? 0) - (b.timestamp?.toMillis?.() ?? 0))
+    .forEach(log => {
+      if (log.type === 'Check-In') activeMap.set(log.memberId, log);
+      else activeMap.delete(log.memberId);
+    });
+  const activeMembersList = Array.from(activeMap.values());
   const activeCount = activeMembersList.length;
 
-  const calculateDuration = (ts) => {
-    if (!ts) return 'Just now';
-    const start = ts.toMillis ? ts.toMillis() : new Date(ts).getTime();
-    const now = Date.now();
-    const diffMins = Math.floor((now - start) / 60000);
-    if (diffMins < 60) return `${diffMins} mins`;
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return `${hours}h ${mins}m`;
+  /* Helpers */
+  const fmtTime = (ts) => {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  const formatTime = (ts) => {
-    if (!ts) return 'Just now';
-    if (ts.toDate) {
-      return ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (ts) => {
+  const fmtDate = (ts) => {
     if (!ts) return 'Today';
-    if (ts.toDate) {
-      return ts.toDate().toLocaleDateString();
-    }
-    return new Date(ts).toLocaleDateString();
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
+  const fmtDuration = (ts) => {
+    if (!ts) return 'Just now';
+    const ms   = Date.now() - (ts.toMillis?.() ?? new Date(ts).getTime());
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
+
+  /* Filtered rows */
+  const rows = filterQuery === 'active' ? activeMembersList : attendance;
+  const getFilteredLogs = () => {
+    let filtered = rows;
+
+    const searchTerm = (globalSearchTerm || localSearchTerm || '').toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter(l => 
+        (l.memberName || '').toLowerCase().includes(searchTerm) ||
+        (l.memberId || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    return filtered;
+  };
+
+  const filtered = getFilteredLogs();
+
+  /* Checkins and checkouts today */
+  const todayStr = new Date().toLocaleDateString();
+  const todayIn  = attendance.filter(l => l.type === 'Check-In'  && fmtDate(l.timestamp) === todayStr).length;
+  const todayOut = attendance.filter(l => l.type === 'Check-Out' && fmtDate(l.timestamp) === todayStr).length;
 
   return (
-    <div className="members-container animate-fade-in">
+    <div className="admin-container animate-fade-in">
+
+      {/* ── Header ── */}
       <div className="admin-header">
         <div>
-          <h1>Live Attendance</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Currently inside: <strong className="text-green">{activeCount} members</strong></p>
+          <h1><Activity size={22} className="text-accent" /> Live Attendance</h1>
+          <p>Real-time gym entry & exit log</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="btn btn-outline text-accent" onClick={simulateBiometricScan}>
-            <Fingerprint size={18} /> Simulate Scanner
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button className="btn btn-outline" onClick={simulateScan} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Fingerprint size={16} /> Simulate Scanner
           </button>
-          <button className="btn btn-primary" onClick={manualCheckIn}>
-            <LogIn size={18} /> Manual Check-In
+          <button className="btn btn-primary" onClick={manualCheckIn} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <LogIn size={16} /> Manual Check-In
           </button>
         </div>
       </div>
 
-      <div className="members-table-container glass-panel">
-        <div className="filters-row" style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '1rem' }}>
-          <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg)', padding: '0.5rem 1rem', borderRadius: '8px', flex: 1 }}>
-            <Search size={18} color="var(--text-muted)" />
-            <input type="text" placeholder="Search member logs..." style={{ background: 'transparent', border: 'none', color: 'var(--text)', marginLeft: '0.5rem', width: '100%', outline: 'none' }} />
+      {/* ── Summary Cards ── */}
+      <div className="attn-summary-row">
+        <div className="attn-summary-card accent">
+          <div className="attn-summary-icon"><Users size={20} /></div>
+          <div>
+            <div className="attn-summary-value">{activeCount}</div>
+            <div className="attn-summary-label">Currently Inside</div>
           </div>
         </div>
-        
-        <table className="members-table">
-          <thead>
-            {filterQuery === 'active' ? (
-              <tr>
-                <th>Member Name</th>
-                <th>Check-In Time</th>
-                <th>Duration Inside</th>
-                <th>Method</th>
-              </tr>
-            ) : (
-              <tr>
-                <th>Time</th>
-                <th>Date</th>
-                <th>Member Name</th>
-                <th>Action</th>
-                <th>Method</th>
-              </tr>
-            )}
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>Loading live attendance logs...</td></tr>
-            ) : filterQuery === 'active' ? (
-              activeMembersList.length === 0 ? (
-                <tr><td colSpan="4" style={{textAlign: 'center', padding: '2rem'}}>No members currently in the gym.</td></tr>
-              ) : activeMembersList.map((log) => (
-                <tr key={log.id}>
-                  <td><strong>{log.memberName}</strong> <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>({log.memberId})</span></td>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Clock size={16} color="var(--text-muted)" />
-                    {formatTime(log.timestamp)}
-                  </td>
-                  <td>
-                    <span className="plan-badge active" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Timer size={12} />
-                      {calculateDuration(log.timestamp)}
-                    </span>
-                  </td>
-                  <td>{log.method}</td>
+        <div className="attn-summary-card green">
+          <div className="attn-summary-icon"><LogIn size={20} /></div>
+          <div>
+            <div className="attn-summary-value">{todayIn}</div>
+            <div className="attn-summary-label">Check-Ins Today</div>
+          </div>
+        </div>
+        <div className="attn-summary-card red">
+          <div className="attn-summary-icon"><LogOut size={20} /></div>
+          <div>
+            <div className="attn-summary-value">{todayOut}</div>
+            <div className="attn-summary-label">Check-Outs Today</div>
+          </div>
+        </div>
+        <div className="attn-summary-card blue">
+          <div className="attn-summary-icon"><Clock size={20} /></div>
+          <div>
+            <div className="attn-summary-value">{attendance.length}</div>
+            <div className="attn-summary-label">Total Log Entries</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Table Card ── */}
+      <div className="attn-table-card">
+
+        {/* Search bar */}
+        <div className="attn-table-toolbar">
+          <div className="attn-search">
+            <Search size={15} />
+            <input
+              type="text" 
+              placeholder="Search by name or member ID..." 
+              value={localSearchTerm}
+              onChange={e => setLocalSearchTerm(e.target.value)}
+            />
+          </div>
+          <span className="attn-count-badge">
+            {filtered.length} record{filtered.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* Table */}
+        <div className="attn-table-wrap">
+          <table className="attn-table">
+            <thead>
+              {filterQuery === 'active' ? (
+                <tr>
+                  <th>Member</th>
+                  <th>Check-In Time</th>
+                  <th>Duration Inside</th>
+                  <th>Method</th>
                 </tr>
-              ))
-            ) : (
-              attendance.length === 0 ? (
-                <tr><td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>No one has checked in yet.</td></tr>
-              ) : attendance.map((log) => (
-                <tr key={log.id}>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Clock size={16} color="var(--text-muted)" />
-                    {formatTime(log.timestamp)}
-                  </td>
-                  <td>{formatDate(log.timestamp)}</td>
-                  <td><strong>{log.memberName}</strong> <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>({log.memberId})</span></td>
-                  <td>
-                    <span className={`plan-badge ${log.type === 'Check-In' ? 'active' : 'expired'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      {log.type === 'Check-In' ? <LogIn size={12} /> : <LogOut size={12} />}
-                      {log.type}
-                    </span>
-                  </td>
-                  <td>{log.method}</td>
+              ) : (
+                <tr>
+                  <th>Time</th>
+                  <th>Date</th>
+                  <th>Member</th>
+                  <th>Action</th>
+                  <th>Method</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              )}
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="5" className="attn-empty">Loading live logs…</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan="5" className="attn-empty">No records found.</td></tr>
+              ) : filterQuery === 'active' ? (
+                filtered.map(log => (
+                  <tr key={log.id}>
+                    <td>
+                      <span className="attn-member-name">{log.memberName}</span>
+                      <span className="attn-member-id">{log.memberId}</span>
+                    </td>
+                    <td className="attn-time"><Clock size={13} />{fmtTime(log.timestamp)}</td>
+                    <td>
+                      <span className="attn-badge green">
+                        <Timer size={12} />{fmtDuration(log.timestamp)}
+                      </span>
+                    </td>
+                    <td className="attn-method">{log.method}</td>
+                  </tr>
+                ))
+              ) : (
+                filtered.map(log => (
+                  <tr key={log.id}>
+                    <td className="attn-time"><Clock size={13} />{fmtTime(log.timestamp)}</td>
+                    <td className="attn-date">{fmtDate(log.timestamp)}</td>
+                    <td>
+                      <span className="attn-member-name">{log.memberName}</span>
+                      <span className="attn-member-id">{log.memberId}</span>
+                    </td>
+                    <td>
+                      <span className={`attn-badge ${log.type === 'Check-In' ? 'green' : 'red'}`}>
+                        {log.type === 'Check-In' ? <LogIn size={12} /> : <LogOut size={12} />}
+                        {log.type}
+                      </span>
+                    </td>
+                    <td className="attn-method">{log.method}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

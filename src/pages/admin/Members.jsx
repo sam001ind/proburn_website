@@ -1,18 +1,25 @@
 import { Search, Filter, MoreVertical, Database, Edit2 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useOutletContext, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useBranch } from '../../context/BranchContext';
 import Modal from '../../components/Modal';
+import ImageUpload from '../../components/ImageUpload';
 import './Admin.css';
 
 export default function Members() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
+  const location = useLocation();
   
   const [allMembers, setAllMembers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const { globalSearchTerm } = useOutletContext() || { globalSearchTerm: '' };
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const { activeBranch } = useBranch();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,11 +58,25 @@ export default function Members() {
     setIsModalOpen(true);
   };
 
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      openAddModal();
+      // Clear the state so it doesn't reopen if they refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   // Live Database Listener
   useEffect(() => {
-    const unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
+    if (!activeBranch) {
+      setAllMembers([]);
+      setLoading(false);
+      return;
+    }
+    const qMembers = query(collection(db, 'members'), where('branchId', '==', activeBranch.id));
+    const unsubMembers = onSnapshot(qMembers, (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllMembers(membersData);
+      setAllMembers(membersData.filter(m => !m.role || m.role === 'Member'));
       setLoading(false);
     });
     const unsubRoles = onSnapshot(collection(db, 'roles'), (snapshot) => {
@@ -63,7 +84,7 @@ export default function Members() {
       setRoles(rolesData);
     });
     return () => { unsubMembers(); unsubRoles(); };
-  }, []);
+  }, [activeBranch]);
 
   const seedDatabase = async () => {
     const mockMembers = [
@@ -82,29 +103,44 @@ export default function Members() {
   };
 
   const getFilteredMembers = () => {
-    if (!filterQuery) return allMembers;
-    
-    switch (filterQuery) {
-      case 'active':
-        return allMembers.filter(m => m.status === 'Active');
-      case 'expired':
-        return allMembers.filter(m => m.status === 'Expired');
-      case 'expiring-3':
-        return allMembers.filter(m => m.status === 'Active' && m.expiry > 0 && m.expiry <= 3);
-      case 'expiring-10':
-        return allMembers.filter(m => m.status === 'Active' && m.expiry > 3 && m.expiry <= 10);
-      case 'expiring-15':
-        return allMembers.filter(m => m.status === 'Active' && m.expiry > 10 && m.expiry <= 15);
-      default:
-        return allMembers;
+    let filtered = allMembers;
+
+    if (filterQuery) {
+      switch (filterQuery) {
+        case 'active':
+          filtered = filtered.filter(m => m.status === 'Active');
+          break;
+        case 'expired':
+          filtered = filtered.filter(m => m.status === 'Expired');
+          break;
+        case 'expiring-3':
+          filtered = filtered.filter(m => m.status === 'Active' && m.expiry > 0 && m.expiry <= 3);
+          break;
+        case 'expiring-10':
+          filtered = filtered.filter(m => m.status === 'Active' && m.expiry > 3 && m.expiry <= 10);
+          break;
+        case 'expiring-15':
+          filtered = filtered.filter(m => m.status === 'Active' && m.expiry > 10 && m.expiry <= 15);
+          break;
+      }
     }
+
+    const searchTerm = (globalSearchTerm || localSearchTerm || '').toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter(m => 
+        (m.name || '').toLowerCase().includes(searchTerm) ||
+        (m.id || '').toLowerCase().includes(searchTerm) ||
+        (m.email || '').toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return filtered;
   };
 
   const members = getFilteredMembers();
 
   const handleAddMember = async (e) => {
     e.preventDefault();
-    const isStaff = formData.role !== 'Member';
     
     try {
       if (editingMemberId) {
@@ -119,9 +155,9 @@ export default function Members() {
         await updateDoc(memberRef, {
           name: formData.name,
           email: formData.email,
-          role: formData.role,
-          plan: isStaff ? 'N/A' : formData.plan,
-          expiry: isStaff ? 999 : parseInt(formData.duration),
+          role: 'Member',
+          plan: formData.plan,
+          expiry: parseInt(formData.duration),
           photoURL: formData.photoURL,
           height: formData.height,
           weight: formData.weight,
@@ -129,18 +165,19 @@ export default function Members() {
         });
       } else {
         const newMember = {
-          memberId: (isStaff ? 'S-' : 'M-') + Math.floor(1000 + Math.random() * 9000),
+          memberId: 'M-' + Math.floor(1000 + Math.random() * 9000),
           name: formData.name,
           email: formData.email,
-          role: formData.role,
-          plan: isStaff ? 'N/A' : formData.plan,
+          role: 'Member',
+          plan: formData.plan,
           status: 'Active',
           joined: new Date(formData.joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          expiry: isStaff ? 999 : parseInt(formData.duration),
+          expiry: parseInt(formData.duration),
           photoURL: formData.photoURL,
           height: formData.height,
           weight: formData.weight,
-          weightHistory: formData.weight ? [{ weight: formData.weight, date: new Date().toISOString() }] : []
+          weightHistory: formData.weight ? [{ weight: formData.weight, date: new Date().toISOString() }] : [],
+          branchId: activeBranch.id
         };
         await addDoc(collection(db, 'members'), newMember);
       }
@@ -173,7 +210,7 @@ export default function Members() {
               <Database size={18} /> Seed Data
             </button>
           )}
-          <button className="btn btn-primary" onClick={openAddModal}>+ Add Member / Staff</button>
+          <button className="btn btn-primary" onClick={openAddModal}>+ Add Member</button>
         </div>
       </div>
 
@@ -181,7 +218,12 @@ export default function Members() {
         <div className="table-controls">
           <div className="search-box">
             <Search size={18} className="text-secondary" />
-            <input type="text" placeholder="Search by name or ID..." />
+            <input 
+              type="text" 
+              placeholder="Search by name or ID..." 
+              value={localSearchTerm}
+              onChange={e => setLocalSearchTerm(e.target.value)}
+            />
           </div>
           <button className="btn btn-outline"><Filter size={18} /> Filter</button>
         </div>
@@ -221,11 +263,11 @@ export default function Members() {
                   {m.plan === 'N/A' ? (
                     <span className="text-secondary">Staff</span>
                   ) : (
-                    <span className={`plan-badge ${m.plan.toLowerCase()}`}>{m.plan}</span>
+                    <span className={`plan-badge ${m.plan?.toLowerCase()}`}>{m.plan}</span>
                   )}
                 </td>
                 <td>
-                  <span className={`status-badge ${m.status.toLowerCase()}`}>
+                  <span className={`status-badge ${m.status?.toLowerCase()}`}>
                     {m.status === 'Active' && m.expiry <= 15 ? `Expiring in ${m.expiry}d` : m.status}
                   </span>
                 </td>
@@ -242,21 +284,15 @@ export default function Members() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingMemberId ? "Edit Person" : "Add New Person"}>
         <form className="modal-form" onSubmit={handleAddMember}>
-          <div className="form-group" style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
-              {formData.photoURL ? (
-                <img src={formData.photoURL} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent)' }} />
-              ) : (
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed rgba(255,255,255,0.2)' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No Photo</span>
-                </div>
-              )}
-            </div>
-            <input type="file" accept="image/*" onChange={handlePhotoUpload} id="photo-upload" style={{ display: 'none' }} />
-            <label htmlFor="photo-upload" style={{ cursor: 'pointer', color: 'var(--accent)', fontSize: '0.9rem', fontWeight: 500 }}>
-              {formData.photoURL ? 'Change Photo' : 'Upload Photo'}
-            </label>
-          </div>
+          <ImageUpload
+            value={formData.photoURL}
+            onChange={(url) => setFormData({ ...formData, photoURL: url })}
+            storagePath="members/photos"
+            label="Profile Photo"
+            width={400}
+            height={400}
+            maxMB={2}
+          />
           <div className="form-group">
             <label>Full Name</label>
             <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. John Doe" />
@@ -301,37 +337,27 @@ export default function Members() {
               );
             })()
           )}
-          <div className="form-group">
+          <div className="form-group" style={{ display: 'none' }}>
             <label>Role</label>
-            <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-              <option value="Member">Gym Member</option>
-              <option value="Super Admin">Super Admin</option>
-              {roles.filter(r => r.name !== 'Super Admin').map(r => (
-                <option key={r.name} value={r.name}>{r.name}</option>
-              ))}
+            <input type="hidden" value="Member" />
+          </div>
+          <div className="form-group">
+            <label>Membership Plan</label>
+            <select value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
+              <option value="Basic">Basic</option>
+              <option value="Pro">Pro</option>
+              <option value="Elite">Elite</option>
             </select>
           </div>
-          {formData.role === 'Member' && (
-            <>
-              <div className="form-group">
-                <label>Membership Plan</label>
-                <select value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
-                  <option value="Basic">Basic</option>
-                  <option value="Pro">Pro</option>
-                  <option value="Elite">Elite</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Duration</label>
-                <select value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})}>
-                  <option value="30">1 Month (30 Days)</option>
-                  <option value="90">3 Months (90 Days)</option>
-                  <option value="180">6 Months (180 Days)</option>
-                  <option value="365">1 Year (365 Days)</option>
-                </select>
-              </div>
-            </>
-          )}
+          <div className="form-group">
+            <label>Duration</label>
+            <select value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})}>
+              <option value="30">1 Month (30 Days)</option>
+              <option value="90">3 Months (90 Days)</option>
+              <option value="180">6 Months (180 Days)</option>
+              <option value="365">1 Year (365 Days)</option>
+            </select>
+          </div>
           <div className="form-group">
             <label>Joined Date</label>
             <input type="date" required value={formData.joined} onChange={e => setFormData({...formData, joined: e.target.value})} />

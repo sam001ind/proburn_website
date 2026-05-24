@@ -1,8 +1,9 @@
 import { Search, Filter, ArrowUpRight, ArrowDownRight, MoreVertical, Database } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useBranch } from '../../context/BranchContext';
 import Modal from '../../components/Modal';
 import './Admin.css';
 
@@ -12,6 +13,10 @@ export default function Billing() {
 
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { globalSearchTerm } = useOutletContext() || { globalSearchTerm: '' };
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const { activeBranch } = useBranch();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,24 +31,30 @@ export default function Billing() {
 
   // Live Database Listener
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+    if (!activeBranch) {
+      setAllTransactions([]);
+      setLoading(false);
+      return;
+    }
+    const qTx = query(collection(db, 'transactions'), where('branchId', '==', activeBranch.id));
+    const unsubscribe = onSnapshot(qTx, (snapshot) => {
       const txData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllTransactions(txData);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [activeBranch]);
 
   const seedDatabase = async () => {
     const mockTransactions = [
-      { transactionId: 'TRX-901', date: '2026-05-24', member: 'Alex Johnson', type: 'Income', amount: '₹3,500', status: 'Completed', category: "Today's Collection" },
-      { transactionId: 'TRX-902', date: '2026-05-22', member: 'Sarah Williams', type: 'Income', amount: '₹12,000', status: 'Completed', category: 'Weekly Collection' },
-      { transactionId: 'TRX-903', date: '2026-05-20', member: 'Mike Chen', type: 'Income', amount: '₹9,000', status: 'Completed', category: 'Monthly Collection' },
-      { transactionId: 'TRX-904', date: '2026-05-24', member: 'EquipFix Inc', type: 'Expense', amount: '₹15,000', status: 'Completed', category: 'Equipment Maintenance' },
-      { transactionId: 'TRX-905', date: '2026-05-15', member: 'Power Utilities', type: 'Expense', amount: '₹42,000', status: 'Completed', category: 'Electricity Bill' },
-      { transactionId: 'TRX-906', date: '2026-05-01', member: 'Emily Davis', type: 'Income', amount: '₹24,500', status: 'Completed', category: 'Yearly Subscription' },
-      { transactionId: 'TRX-907', date: '2026-05-10', member: 'David Wilson', type: 'Due', amount: '₹6,000', status: 'Pending', category: 'Monthly Installment' },
-      { transactionId: 'TRX-908', date: '2026-04-28', member: 'Jessica Taylor', type: 'Due', amount: '₹6,000', status: 'Overdue', category: 'Monthly Installment' },
+      { transactionId: 'TRX-901', date: '2026-05-24', member: 'Alex Johnson', type: 'Income', amount: '₹3,500', status: 'Completed', category: "Today's Collection", branchId: activeBranch.id },
+      { transactionId: 'TRX-902', date: '2026-05-22', member: 'Sarah Williams', type: 'Income', amount: '₹12,000', status: 'Completed', category: 'Weekly Collection', branchId: activeBranch.id },
+      { transactionId: 'TRX-903', date: '2026-05-20', member: 'Mike Chen', type: 'Income', amount: '₹9,000', status: 'Completed', category: 'Monthly Collection', branchId: activeBranch.id },
+      { transactionId: 'TRX-904', date: '2026-05-24', member: 'EquipFix Inc', type: 'Expense', amount: '₹15,000', status: 'Completed', category: 'Equipment Maintenance', branchId: activeBranch.id },
+      { transactionId: 'TRX-905', date: '2026-05-15', member: 'Power Utilities', type: 'Expense', amount: '₹42,000', status: 'Completed', category: 'Electricity Bill', branchId: activeBranch.id },
+      { transactionId: 'TRX-906', date: '2026-05-01', member: 'Emily Davis', type: 'Income', amount: '₹24,500', status: 'Completed', category: 'Yearly Subscription', branchId: activeBranch.id },
+      { transactionId: 'TRX-907', date: '2026-05-10', member: 'David Wilson', type: 'Due', amount: '₹6,000', status: 'Pending', category: 'Monthly Installment', branchId: activeBranch.id },
+      { transactionId: 'TRX-908', date: '2026-04-28', member: 'Jessica Taylor', type: 'Due', amount: '₹6,000', status: 'Overdue', category: 'Monthly Installment', branchId: activeBranch.id },
     ];
     for (const t of mockTransactions) {
       await addDoc(collection(db, 'transactions'), t);
@@ -52,24 +63,41 @@ export default function Billing() {
   };
 
   const getFilteredTransactions = () => {
-    if (!filterQuery) return allTransactions;
-    
-    switch (filterQuery) {
-      case 'today':
-        return allTransactions.filter(t => t.category === "Today's Collection");
-      case 'weekly':
-        return allTransactions.filter(t => t.type === 'Income' && ["Today's Collection", 'Weekly Collection'].includes(t.category));
-      case 'monthly':
-        return allTransactions.filter(t => t.type === 'Income' && t.status === 'Completed');
-      case 'yearly':
-        return allTransactions.filter(t => t.type === 'Income' && t.status === 'Completed');
-      case 'due':
-        return allTransactions.filter(t => t.type === 'Due');
-      case 'expenses':
-        return allTransactions.filter(t => t.type === 'Expense');
-      default:
-        return allTransactions;
+    let filtered = allTransactions;
+
+    if (filterQuery) {
+      switch (filterQuery) {
+        case 'today':
+          filtered = filtered.filter(t => t.category === "Today's Collection");
+          break;
+        case 'weekly':
+          filtered = filtered.filter(t => t.category === 'Weekly Collection');
+          break;
+        case 'monthly':
+          filtered = filtered.filter(t => t.category === 'Monthly Collection');
+          break;
+        case 'dues':
+          filtered = filtered.filter(t => t.type === 'Due');
+          break;
+        case 'due':
+          filtered = filtered.filter(t => t.type === 'Due');
+          break;
+        case 'expenses':
+          filtered = filtered.filter(t => t.type === 'Expense');
+          break;
+      }
     }
+
+    const searchTerm = (globalSearchTerm || localSearchTerm || '').toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter(t => 
+        (t.member || '').toLowerCase().includes(searchTerm) ||
+        (t.transactionId || '').toLowerCase().includes(searchTerm) ||
+        (t.category || '').toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return filtered;
   };
 
   const transactions = getFilteredTransactions();
@@ -88,14 +116,12 @@ export default function Billing() {
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
+    if (!activeBranch) return;
     const newTx = {
-      transactionId: 'TRX-' + Math.floor(1000 + Math.random() * 9000),
-      date: formData.date,
-      member: formData.member,
-      type: formData.type,
+      transactionId: 'TRX-' + Math.floor(100 + Math.random() * 900),
+      ...formData,
       amount: '₹' + Number(formData.amount).toLocaleString('en-IN'),
-      status: formData.status,
-      category: formData.category
+      branchId: activeBranch.id
     };
     
     try {
@@ -125,7 +151,12 @@ export default function Billing() {
         <div className="table-controls">
           <div className="search-box">
             <Search size={18} className="text-secondary" />
-            <input type="text" placeholder="Search by ID or member..." />
+            <input 
+              type="text" 
+              placeholder="Search by ID or member..." 
+              value={localSearchTerm}
+              onChange={e => setLocalSearchTerm(e.target.value)}
+            />
           </div>
           <button className="btn btn-outline"><Filter size={18} /> Filter</button>
         </div>

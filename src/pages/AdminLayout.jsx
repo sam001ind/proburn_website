@@ -1,10 +1,13 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, LogOut, Settings, CreditCard, Clock, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, UserCog, Calendar, LogOut, Settings, CreditCard, Clock, Shield, Menu } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Home, UserPlus, Building2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { useBranch } from '../context/BranchContext';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
@@ -12,7 +15,12 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const { currentUser } = useAuth();
+  const { branches, activeBranch, setActiveBranch } = useBranch();
   const [userRoleData, setUserRoleData] = useState(null);
+  const [isCollapsed, setIsCollapsed] = useState(window.innerWidth <= 768);
+  const [expandedMenus, setExpandedMenus] = useState(['settings', 'homepage']);
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -45,6 +53,15 @@ export default function AdminLayout() {
     return () => unsubMember();
   }, [currentUser]);
 
+  // Live count of new leads
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, 'leads'), where('status', '==', 'New')),
+      (snap) => setNewLeadsCount(snap.size)
+    );
+    return () => unsub();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -57,39 +74,143 @@ export default function AdminLayout() {
   const navItems = [
     { id: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Overview' },
     { id: 'members', path: '/admin/members', icon: <Users size={20} />, label: 'Members' },
+    { id: 'staff', path: '/admin/staff', icon: <UserCog size={20} />, label: 'Staff' },
     { id: 'attendance', path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance' },
     { id: 'billing', path: '/admin/billing', icon: <CreditCard size={20} />, label: 'Billing' },
-    { id: 'roles', path: '/admin/roles', icon: <Shield size={20} />, label: 'Roles' },
-    { id: 'settings', path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
+    {
+      id: 'leads', path: '/admin/leads', icon: <UserPlus size={20} />, label: 'Leads',
+      badge: newLeadsCount > 0 ? newLeadsCount : null
+    },
+    { 
+      id: 'homepage', 
+      icon: <Home size={20} />, 
+      label: 'Homepage',
+      subMenus: [
+        { path: '/admin/homepage/sections',  label: '📱 Section Manager' },
+        { path: '/admin/homepage/navbar',    label: '🔝 Navbar' },
+        { path: '/admin/homepage/branding',  label: '🎨 Branding & Logo' },
+        { path: '/admin/homepage/hero',      label: '🏠 Hero Banner' },
+        { path: '/admin/homepage/features',  label: '⚡ Features' },
+        { path: '/admin/homepage/classes',   label: '📅 Classes' },
+        { path: '/admin/homepage/plans',     label: '💳 Plans' },
+        { path: '/admin/homepage/contact',   label: '📍 Contact & Footer' },
+      ]
+    },
+    { 
+      id: 'settings', 
+      icon: <Settings size={20} />, 
+      label: 'Settings',
+      subMenus: [
+        { path: '/admin/settings/clockin',   label: '⏱ Clock-In Settings' },
+        { path: '/admin/settings/branches',  label: '🏢 Branches' },
+        { path: '/admin/settings/roles',     label: '🛡 Role Management' },
+        { path: '/admin/settings/holidays',  label: '📅 Holidays' },
+        { path: '/admin/settings/streaks',   label: '🔥 Streaks' },
+      ]
+    },
+
   ];
+
+  const toggleSubMenu = (id) => {
+    if (expandedMenus.includes(id)) {
+      setExpandedMenus(expandedMenus.filter(m => m !== id));
+    } else {
+      setExpandedMenus([...expandedMenus, id]);
+    }
+  };
 
   // RBAC Filtering logic for sidebar
   const visibleNavItems = navItems.filter(item => {
+    // Hide Homepage completely if running as native mobile app
+    if (Capacitor.isNativePlatform() && item.id === 'homepage') return false;
+    
     if (userRoleData?.name === 'Super Admin') return true;
     return userRoleData?.permissions?.menus?.includes(item.id);
   });
 
+  const handleMobileNav = () => {
+    if (window.innerWidth <= 768) {
+      setIsCollapsed(true);
+    }
+  };
+
   return (
     <div className="admin-layout">
+      {/* Mobile Overlay */}
+      {window.innerWidth <= 768 && !isCollapsed && (
+        <div 
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+          onClick={() => setIsCollapsed(true)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className="admin-sidebar glass-panel">
+      <aside className={`admin-sidebar glass-panel ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <h2>PRO<span>BURN</span> MIS</h2>
+          {window.innerWidth <= 768 && (
+            <button onClick={() => setIsCollapsed(true)} style={{ background: 'none', border: 'none', color: 'white' }}>✕</button>
+          )}
         </div>
         
         <nav className="sidebar-nav">
           {visibleNavItems.map((item) => (
-            <Link 
-              key={item.path} 
-              to={item.path === '/admin' ? '/admin/dashboard' : item.path}
-              className={`sidebar-link ${(location.pathname === item.path || location.pathname === item.path + '/dashboard') ? 'active' : ''}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
+            <div key={item.id}>
+              {item.subMenus ? (
+                <>
+                  <button 
+                    onClick={() => toggleSubMenu(item.id)}
+                    className={`sidebar-link ${location.pathname.startsWith('/admin/' + item.id) ? 'active' : ''}`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%', justifyContent: 'space-between' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </div>
+                    {expandedMenus.includes(item.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </button>
+                  {expandedMenus.includes(item.id) && !isCollapsed && (
+                    <div className="sub-menu-container">
+                      {item.subMenus.map(sub => (
+                        <Link 
+                          key={sub.path} 
+                          to={sub.path}
+                          onClick={handleMobileNav}
+                          className={`sidebar-sub-link ${location.pathname === sub.path ? 'active' : ''}`}
+                        >
+                          {sub.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link 
+                  to={item.path === '/admin' ? '/admin/dashboard' : item.path}
+                  onClick={handleMobileNav}
+                  className={`sidebar-link ${(location.pathname === item.path || location.pathname === item.path + '/dashboard') ? 'active' : ''}`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      background: 'var(--accent)',
+                      color: 'white',
+                      borderRadius: '50px',
+                      padding: '1px 7px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      minWidth: '20px',
+                      textAlign: 'center',
+                    }}>{item.badge}</span>
+                  )}
+                </Link>
+              )}
+            </div>
           ))}
           
-          <button className="sidebar-link logout" style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }} onClick={handleLogout}>
+          <button className="sidebar-link logout" style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%', marginTop: '1rem' }} onClick={handleLogout}>
             <LogOut size={20} />
             <span>Log Out</span>
           </button>
@@ -99,17 +220,62 @@ export default function AdminLayout() {
       {/* Main Content Area */}
       <main className="admin-main">
         <header className="admin-topbar glass-panel">
-          <div className="topbar-search">
-            <input type="text" placeholder="Search members, classes, or transactions..." />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)} 
+              className="icon-btn" 
+              style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Menu size={24} />
+            </button>
+            <div className="topbar-search" style={{ flexGrow: 1, maxWidth: '400px' }}>
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                style={{ width: '100%' }} 
+                value={globalSearchTerm}
+                onChange={e => setGlobalSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
           <div className="topbar-user">
+            {/* Branch switcher */}
+            {branches && branches.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '1rem' }}>
+                <Building2 size={15} style={{ color: 'var(--text-secondary)' }} />
+                <select
+                  value={activeBranch?.id || ''}
+                  onChange={e => {
+                    const branch = branches.find(b => b.id === e.target.value);
+                    if (branch) setActiveBranch(branch);
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid var(--glass-border)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    padding: '0.3rem 0.7rem',
+                    fontSize: '0.82rem',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    maxWidth: '160px',
+                  }}
+                >
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id} style={{ background: '#0f1a2e' }}>
+                      {b.branchName || b.gymName || 'Branch'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="avatar">A</div>
             <span>Admin</span>
           </div>
         </header>
 
         <div className="admin-content">
-          <Outlet />
+          <Outlet context={{ globalSearchTerm }} />
         </div>
       </main>
     </div>

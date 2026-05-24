@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import confetti from 'canvas-confetti';
+import ClockWidget from '../../components/ClockWidget';
 import '../admin/Admin.css';
 
 export default function MemberDashboard() {
@@ -17,7 +18,8 @@ export default function MemberDashboard() {
   const [holidays, setHolidays] = useState([]);
   const [gymConfig, setGymConfig] = useState({ targetStreak: 0, plans: [] });
   const [loading, setLoading] = useState(true);
-  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState(null);
   const [hasCelebratedStreak, setHasCelebratedStreak] = useState(false);
 
   useEffect(() => {
@@ -61,7 +63,70 @@ export default function MemberDashboard() {
     return () => { unsubAtt(); unsubHolidays(); unsubConfig(); };
   }, [profile]);
 
+  // Calculate Streak
+  const getLocalYYYYMMDD = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const checkInDates = new Set();
+  attendance.forEach(log => {
+    if (log.type === 'Check-In' && log.timestamp) {
+      const d = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+      checkInDates.add(getLocalYYYYMMDD(d));
+    }
+  });
+
+  const holidayDates = new Set(holidays);
+
+  let streak = 0;
+  let curr = new Date();
+  for (let i = 0; i < 365; i++) {
+    const dateStr = getLocalYYYYMMDD(curr);
+    if (checkInDates.has(dateStr)) {
+      streak++;
+    } else {
+      if (i === 0) {
+        // Today not attended yet. Do not break streak.
+      } else if (holidayDates.has(dateStr)) {
+        // Holiday not attended. Do not break streak.
+      } else {
+        // Missed a regular day. Break streak.
+        break;
+      }
+    }
+    curr.setDate(curr.getDate() - 1);
+  }
+
+  // Confetti trigger
+  useEffect(() => {
+    const milestones = gymConfig.streaks || [];
+    const matchedMilestone = milestones.find(m => parseInt(m.days) === streak);
+
+    if (streak > 0 && matchedMilestone && !hasCelebratedStreak) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ff7b00', '#ffffff', '#eccc68'],
+        disableForReducedMotion: true
+      });
+      setCelebrationMessage(`🎉 ${matchedMilestone.title || 'Milestone Reached!'} (${streak} Day Streak) 🎉`);
+      setHasCelebratedStreak(true);
+      setTimeout(() => setCelebrationMessage(null), 5000); // Hide after 5 seconds
+    }
+  }, [streak, gymConfig.streaks, hasCelebratedStreak]);
+
   if (!profile) {
+    if (loading) {
+      return (
+        <div className="members-container animate-fade-in" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <h2 style={{ color: 'var(--text-muted)' }}>Loading your dashboard...</h2>
+        </div>
+      );
+    }
     return (
       <div className="members-container animate-fade-in" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
         <h2>Account Setup Pending</h2>
@@ -139,69 +204,41 @@ export default function MemberDashboard() {
     }
   }
 
-  // Calculate Streak
-  const getLocalYYYYMMDD = (d) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const checkInDates = new Set();
-  attendance.forEach(log => {
-    if (log.type === 'Check-In' && log.timestamp) {
-      const d = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-      checkInDates.add(getLocalYYYYMMDD(d));
-    }
-  });
-
-  const holidayDates = new Set(holidays);
-
-  let streak = 0;
-  let curr = new Date();
-  for (let i = 0; i < 365; i++) {
-    const dateStr = getLocalYYYYMMDD(curr);
-    if (checkInDates.has(dateStr)) {
-      streak++;
-    } else {
-      if (i === 0) {
-        // Today not attended yet. Do not break streak.
-      } else if (holidayDates.has(dateStr)) {
-        // Holiday not attended. Do not break streak.
-      } else {
-        // Missed a regular day. Break streak.
-        break;
-      }
-    }
-    curr.setDate(curr.getDate() - 1);
-  }
-
-  // Confetti trigger
-  useEffect(() => {
-    if (streak > 0 && gymConfig.targetStreak > 0 && streak >= gymConfig.targetStreak && !hasCelebratedStreak) {
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#ff7b00', '#ffffff', '#eccc68'],
-        disableForReducedMotion: true
-      });
-      setHasCelebratedStreak(true);
-    }
-  }, [streak, gymConfig.targetStreak, hasCelebratedStreak]);
-
   // Find plan features
-  const activePlanDetails = gymConfig.plans?.find(p => p.name.toLowerCase() === profile.plan.toLowerCase())?.features || "No specific features configured for this plan.";
+  const activePlanDetails = gymConfig.plans?.find(p => p.name.toLowerCase() === profile.plan?.toLowerCase())?.features || "No specific features configured for this plan.";
 
   return (
-    <div className="members-container animate-fade-in">
+    <div className="members-container animate-fade-in" style={{ position: 'relative' }}>
+      
+      {celebrationMessage && (
+        <div style={{
+          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--accent)', color: 'black', padding: '1rem 2rem', 
+          borderRadius: '50px', zIndex: 9999, fontWeight: 'bold', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          animation: 'slideDown 0.5s ease-out'
+        }}>
+          {celebrationMessage}
+        </div>
+      )}
+
       <div className="admin-header">
-        <h1>My Dashboard</h1>
-        <p style={{ color: 'var(--text-muted)' }}>Member ID: {profile.memberId}</p>
+        <div>
+          <h1>My Dashboard</h1>
+          <p style={{ color: 'var(--text-muted)' }}>Member ID: {profile.memberId}</p>
+        </div>
       </div>
 
+      {/* ── Clock In / Clock Out ── */}
+      <ClockWidget
+        memberId={profile.memberId || profile.id}
+        memberName={profile.name || profile.email}
+        role="Member"
+        method="Web App – Member Portal"
+      />
+
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-card glass-card interactive-card" onClick={() => setShowPlanModal(true)} style={{ cursor: 'pointer' }}>
+        <div className="stat-card glass-card interactive-card" onClick={() => setIsPlanModalOpen(true)} style={{ cursor: 'pointer' }}>
           <div className="stat-icon"><Award size={24} className="text-accent" /></div>
           <div className="stat-info">
             <p>My Plan</p>
@@ -220,7 +257,7 @@ export default function MemberDashboard() {
           <div className="stat-info">
             <p>Membership Status</p>
             <h3>
-              <span className={`status-badge ${profile.status.toLowerCase()}`}>{profile.status}</span>
+              <span className={`status-badge ${profile.status?.toLowerCase() || 'inactive'}`}>{profile.status || 'Inactive'}</span>
             </h3>
           </div>
         </div>
@@ -233,7 +270,7 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title={`${profile.plan} Plan Details`}>
+      <Modal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} title={`${profile.plan} Plan Details`} sidePanel>
         <div style={{ fontSize: '1rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
           {activePlanDetails}
         </div>

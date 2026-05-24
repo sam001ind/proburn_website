@@ -1,11 +1,15 @@
+/* ============================================= */
+/*  Standard centered modal                       */
+/* ============================================= */
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -15,6 +19,9 @@
 .modal-container {
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-secondary);
   border-radius: 16px;
   padding: 0;
@@ -23,16 +30,74 @@
   border: 1px solid var(--glass-border);
 }
 
+/* ============================================= */
+/*  Side-panel overlay — anchored TOP-LEFT       */
+/* ============================================= */
+
+.side-panel-overlay {
+  justify-content: flex-start;  /* left edge */
+  align-items: flex-start;      /* top edge  */
+}
+
+/* ============================================= */
+/*  Side panel container                         */
+/* ============================================= */
+
+.side-panel {
+  width: 480px;
+  max-width: 94vw;
+  /* Never taller than the viewport — content scrolls inside */
+  height: auto;
+  max-height: 100vh;
+  /* Anchor flush to the top */
+  margin-top: 0;
+  border-radius: 0;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@keyframes animate-slide-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+.animate-slide-left {
+  animation: animate-slide-left 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================= */
+/*  Panel body scrolls internally                */
+/* ============================================= */
+
+.side-panel .modal-body {
+  flex-grow: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.side-panel .modal-body::-webkit-scrollbar       { width: 4px; }
+.side-panel .modal-body::-webkit-scrollbar-track { background: transparent; }
+.side-panel .modal-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+/* ============================================= */
+/*  Header                                       */
+/* ============================================= */
+
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.4rem;
   border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
 }
@@ -47,76 +112,129 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* ============================================= */
+/*  Body                                         */
+/* ============================================= */
+
 .modal-body {
-  padding: 1.5rem;
-  max-height: 70vh;
+  padding: 1.25rem 1.4rem;
   overflow-y: auto;
+  flex-grow: 1;
 }
 
-/* Common Form Styles for Modals */
+/* ============================================= */
+/*  2-column compact form grid                   */
+/* ============================================= */
+
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.modal-form-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+/* ============================================= */
+/*  Shared form styles                           */
+/* ============================================= */
+
 .modal-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .form-group label {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-group input,
-.form-group select {
-  padding: 0.75rem 1rem;
+.form-group select,
+.form-group textarea {
+  padding: 0.65rem 0.9rem;
   border-radius: 8px;
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 1rem;
-  transition: all 0.2s;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-group input[readonly] {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
 }
 
+/* ============================================= */
+/*  Mobile — sheet rises from the bottom         */
+/* ============================================= */
+
 @media (max-width: 768px) {
+  .side-panel-overlay {
+    justify-content: center;
+    align-items: flex-end;
+  }
+
+  .side-panel {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0 !important;
+    animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  @keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+  }
+
   .modal-container {
     width: 95%;
   }
 
-  .modal-header {
-    padding: 1rem;
-  }
-
   .modal-body {
     padding: 1rem;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
+    max-height: calc(100vh - 140px);
   }
 
   .form-actions {
     flex-direction: column;
   }
-  
+
   .form-actions .btn {
     width: 100%;
   }

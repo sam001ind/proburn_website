@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { useBranch } from '../../context/BranchContext';
 import { db } from '../../firebase';
+import ClockWidget from '../../components/ClockWidget';
 import './Admin.css';
 
 export default function Dashboard() {
@@ -13,6 +15,7 @@ export default function Dashboard() {
   const [attendance, setAttendance] = useState([]);
   
   const { currentUser } = useAuth();
+  const { activeBranch } = useBranch();
   const [userRoleData, setUserRoleData] = useState(null);
 
   useEffect(() => {
@@ -40,18 +43,25 @@ export default function Dashboard() {
       }
     });
 
-    const unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
+    if (!activeBranch) {
+      setMembers([]);
+      setTransactions([]);
+      setAttendance([]);
+      return;
+    }
+
+    const unsubMembers = onSnapshot(query(collection(db, 'members'), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setMembers(snapshot.docs.map(doc => doc.data()));
     });
-    const unsubTx = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+    const unsubTx = onSnapshot(query(collection(db, 'transactions'), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setTransactions(snapshot.docs.map(doc => doc.data()));
     });
-    const unsubAtt = onSnapshot(collection(db, 'attendance'), (snapshot) => {
+    const unsubAtt = onSnapshot(query(collection(db, 'attendance'), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setAttendance(snapshot.docs.map(doc => doc.data()));
     });
     
     return () => { unsubMember(); unsubMembers(); unsubTx(); unsubAtt(); };
-  }, [currentUser]);
+  }, [currentUser, activeBranch]);
 
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
@@ -103,9 +113,22 @@ export default function Dashboard() {
   return (
     <div className="dashboard-container animate-fade-in">
       <div className="admin-header">
-        <h1>Dashboard Overview</h1>
-        <button className="btn btn-primary">+ Add Member</button>
+        <div>
+          <h1>Dashboard Overview</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Welcome back, {currentUser?.displayName || currentUser?.email?.split('@')[0]}</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => navigate('/admin/members', { state: { openAddModal: true } })}>+ Add Member</button>
       </div>
+
+      {/* ── Staff Clock-In/Out (hidden for Super Admin) ── */}
+      {currentUser && userRoleData && userRoleData.name !== 'Super Admin' && (
+        <ClockWidget
+          memberId={`STAFF-${currentUser.uid?.slice(0, 8)}`}
+          memberName={currentUser.displayName || currentUser.email}
+          role="Staff"
+          method="Web App – Staff Dashboard"
+        />
+      )}
       
       <div className="stats-grid">
         {visibleStats.map((stat, idx) => (

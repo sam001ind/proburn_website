@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Proburn</string>
+    <string name="title_activity_main">Proburn</string>
+    <string name="package_name">com.proburn.app</string>
+    <string name="custom_url_scheme">com.proburn.app</string>
+</resources>

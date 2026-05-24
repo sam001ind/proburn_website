@@ -169,7 +169,7 @@ export default function MemberHealth() {
           </div>
         </div>
 
-        <Modal isOpen={showLogModal} onClose={() => setShowLogModal(false)} title="Log New Weight">
+        <Modal isOpen={showLogModal} onClose={() => setShowLogModal(false)} title="Log New Weight" sidePanel>
           <form className="modal-form" onSubmit={handleLogWeight}>
             <div className="form-group">
               <label>Current Weight (kg)</label>
@@ -182,7 +182,7 @@ export default function MemberHealth() {
           </form>
         </Modal>
 
-        <Modal isOpen={showBmiInfo} onClose={() => setShowBmiInfo(false)} title="Understanding Your BMI">
+        <Modal isOpen={showBmiInfo} onClose={() => setShowBmiInfo(false)} title="Understanding Your BMI" sidePanel>
           <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
             <p style={{ margin: '0 0 1rem 0' }}><strong>Body Mass Index (BMI)</strong> is calculated by dividing your weight in kilograms by the square of your height in meters (kg/m²).</p>
             <p style={{ margin: '0 0 1.5rem 0' }}>We use the <strong>Indian Medical Guidelines</strong> which are stricter than global standards due to higher health risks at lower weights.</p>

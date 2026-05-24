@@ -85,6 +85,7 @@ export default function MemberDashboard() {
 
   // Generate Progress Description and Chart Data
   let progressDescription = "";
+  let detailedDescription = "";
   let historyData = [];
   if (profile?.weightHistory && profile.weightHistory.length > 0) {
     historyData = profile.weightHistory.map(entry => ({
@@ -111,18 +112,23 @@ export default function MemberDashboard() {
       
       if (weightDiff < 0) {
         if (isUnderweight) {
-          progressDescription = `You've lost ${Math.abs(weightDiff)} kg${bmiDiffStr}. Since you are underweight, consider increasing your caloric intake to build mass.`;
+          progressDescription = `You've lost ${Math.abs(weightDiff)} kg${bmiDiffStr}.`;
+          detailedDescription = `Since you are currently underweight, losing more weight can increase health risks and reduce muscle mass. Consider speaking with a trainer to safely increase your caloric intake and focus on strength training.`;
         } else {
-          progressDescription = `Great progress! You've lost ${Math.abs(weightDiff)} kg since you started tracking${bmiDiffStr}. Keep it up!`;
+          progressDescription = `Great progress! You've lost ${Math.abs(weightDiff)} kg${bmiDiffStr}.`;
+          detailedDescription = `Consistent weight loss indicates your workout and diet plan is effective. Lowering your BMI towards the normal range significantly improves metabolic health and reduces cardiovascular risks. Keep it up!`;
         }
       } else if (weightDiff > 0) {
         if (isUnderweight || bmiCategory === 'Normal (Indian Standard)') {
-          progressDescription = `Awesome! You've gained ${weightDiff} kg${bmiDiffStr}. This is great progress towards a healthy weight!`;
+          progressDescription = `Awesome! You've gained ${weightDiff} kg${bmiDiffStr}.`;
+          detailedDescription = `This is fantastic progress towards building a healthy, strong physique. Gaining weight in the form of lean muscle mass improves your metabolism and overall strength. Make sure your diet supports your workouts!`;
         } else {
-          progressDescription = `You've gained ${weightDiff} kg since you started tracking${bmiDiffStr}. Focus on your workout and diet plans!`;
+          progressDescription = `You've gained ${weightDiff} kg${bmiDiffStr}.`;
+          detailedDescription = `An increase in weight and BMI means you are in a caloric surplus. If your goal is to lose body fat, consider re-evaluating your diet plan and increasing cardio. However, if you are actively bulking to build muscle, this is expected!`;
         }
       } else {
         progressDescription = `Your weight and BMI have remained stable since you started tracking.`;
+        detailedDescription = `Maintaining a stable weight means you are eating at maintenance calories. If your goal is to change your physique, consider adjusting your workout intensity or caloric intake. Consistency is the key!`;
       }
     }
   }
@@ -294,7 +300,7 @@ export default function MemberDashboard() {
                   Weight Progress Trend
                 </h4>
                 {progressDescription && (
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+                  <p style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '1.5rem', fontWeight: 'bold' }}>
                     {progressDescription}
                   </p>
                 )}
@@ -319,6 +325,14 @@ export default function MemberDashboard() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+                {detailedDescription && (
+                  <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', borderLeft: '4px solid var(--accent)' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--accent)', fontSize: '0.9rem' }}>What does this mean for your BMI?</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                      {detailedDescription}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </>

@@ -5,29 +5,32 @@ import { db } from '../../firebase';
 import Modal from '../../components/Modal';
 import './Admin.css';
 
-const AVAILABLE_MENUS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'members', label: 'Member Management' },
-  { id: 'billing', label: 'Billing & Payments' },
-  { id: 'attendance', label: 'Attendance' },
-  { id: 'roles', label: 'Role Management' }
-];
-
-const AVAILABLE_WIDGETS = [
-  { id: 'total_members', label: 'Total Members Stat' },
-  { id: 'active_members', label: 'Active Members Stat' },
-  { id: 'expired_members', label: 'Expired Members Stat' },
-  { id: 'expiring_members', label: 'Expiring Members Stats' },
-  { id: 'currently_in_gym', label: 'Currently in Gym Stat' },
-  { id: 'growth', label: 'Growth Stat' },
-  { id: 'todays_collection', label: "Today's Collection Stat" },
-  { id: 'weekly_collection', label: 'Weekly Collection Stat' },
-  { id: 'monthly_collection', label: 'Monthly Collection Stat' },
-  { id: 'yearly_collection', label: 'Yearly Collection Stat' },
-  { id: 'due_amount', label: 'Due Amount Stat' },
-  { id: 'total_expenses', label: 'Total Expenses Stat' },
-  { id: 'revenue_chart', label: 'Revenue Analytics Chart' },
-  { id: 'upcoming_classes', label: 'Upcoming Classes Widget' }
+const PERMISSION_TREE = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard (Main Menu)',
+    type: 'menu',
+    children: [
+      { id: 'total_members', label: 'Total Members Stat', type: 'widget' },
+      { id: 'active_members', label: 'Active Members Stat', type: 'widget' },
+      { id: 'expired_members', label: 'Expired Members Stat', type: 'widget' },
+      { id: 'expiring_members', label: 'Expiring Members Stats', type: 'widget' },
+      { id: 'currently_in_gym', label: 'Currently in Gym Stat', type: 'widget' },
+      { id: 'growth', label: 'Growth Stat', type: 'widget' },
+      { id: 'todays_collection', label: "Today's Collection Stat", type: 'widget' },
+      { id: 'weekly_collection', label: 'Weekly Collection Stat', type: 'widget' },
+      { id: 'monthly_collection', label: 'Monthly Collection Stat', type: 'widget' },
+      { id: 'yearly_collection', label: 'Yearly Collection Stat', type: 'widget' },
+      { id: 'due_amount', label: 'Due Amount Stat', type: 'widget' },
+      { id: 'total_expenses', label: 'Total Expenses Stat', type: 'widget' },
+      { id: 'revenue_chart', label: 'Revenue Analytics Chart', type: 'widget' },
+      { id: 'upcoming_classes', label: 'Upcoming Classes Widget', type: 'widget' }
+    ]
+  },
+  { id: 'members', label: 'Member Management (Main Menu)', type: 'menu', children: [] },
+  { id: 'billing', label: 'Billing & Payments (Main Menu)', type: 'menu', children: [] },
+  { id: 'attendance', label: 'Attendance (Main Menu)', type: 'menu', children: [] },
+  { id: 'roles', label: 'Role Management (Main Menu)', type: 'menu', children: [] }
 ];
 
 export default function Roles() {
@@ -51,15 +54,28 @@ export default function Roles() {
     return () => unsubscribe();
   }, []);
 
-  const handleCheckboxChange = (type, id) => {
-    setFormData(prev => {
-      const currentList = prev[type];
-      if (currentList.includes(id)) {
-        return { ...prev, [type]: currentList.filter(item => item !== id) };
-      } else {
-        return { ...prev, [type]: [...currentList, id] };
+  const handleTreeCheckbox = (item, isChecked) => {
+    if (item.type === 'menu') {
+      const newMenus = isChecked 
+        ? [...formData.menus, item.id] 
+        : formData.menus.filter(id => id !== item.id);
+      
+      let newWidgets = [...formData.widgets];
+      if (item.children && item.children.length > 0) {
+        const childIds = item.children.map(c => c.id);
+        if (isChecked) {
+          newWidgets = [...new Set([...newWidgets, ...childIds])];
+        } else {
+          newWidgets = newWidgets.filter(id => !childIds.includes(id));
+        }
       }
-    });
+      setFormData({ ...formData, menus: newMenus, widgets: newWidgets });
+    } else {
+      const newWidgets = isChecked
+        ? [...formData.widgets, item.id]
+        : formData.widgets.filter(id => id !== item.id);
+      setFormData({ ...formData, widgets: newWidgets });
+    }
   };
 
   const openAddModal = () => {
@@ -121,8 +137,8 @@ export default function Roles() {
       await setDoc(doc(db, 'roles', 'super-admin-id'), {
         name: 'Super Admin',
         permissions: {
-          menus: AVAILABLE_MENUS.map(m => m.id),
-          widgets: AVAILABLE_WIDGETS.map(w => w.id)
+          menus: PERMISSION_TREE.map(m => m.id),
+          widgets: PERMISSION_TREE.flatMap(m => m.children.map(w => w.id))
         }
       });
       alert('Super Admin role created!');
@@ -203,26 +219,36 @@ export default function Roles() {
             <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Trainer, Front Desk" />
           </div>
 
-          <div className="form-group">
-            <label style={{ marginTop: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>Menu Access</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
-              {AVAILABLE_MENUS.map(menu => (
-                <label key={menu.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 'normal' }}>
-                  <input type="checkbox" checked={formData.menus.includes(menu.id)} onChange={() => handleCheckboxChange('menus', menu.id)} />
-                  {menu.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label style={{ marginTop: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem' }}>Dashboard Widget Access</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
-              {AVAILABLE_WIDGETS.map(widget => (
-                <label key={widget.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 'normal' }}>
-                  <input type="checkbox" checked={formData.widgets.includes(widget.id)} onChange={() => handleCheckboxChange('widgets', widget.id)} />
-                  {widget.label}
-                </label>
+          <div className="form-group" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+            <label style={{ marginTop: '1rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>Menu & Sub-Menu Permissions</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {PERMISSION_TREE.map(menu => (
+                <div key={menu.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 'bold' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.menus.includes(menu.id)} 
+                      onChange={(e) => handleTreeCheckbox(menu, e.target.checked)} 
+                      style={{ transform: 'scale(1.2)' }}
+                    />
+                    {menu.label}
+                  </label>
+                  
+                  {menu.children && menu.children.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem', marginLeft: '1.8rem', paddingLeft: '1rem', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>
+                      {menu.children.map(widget => (
+                        <label key={widget.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.widgets.includes(widget.id)} 
+                            onChange={(e) => handleTreeCheckbox(widget, e.target.checked)} 
+                          />
+                          {widget.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>

@@ -48,6 +48,26 @@ export default function MemberDashboard() {
     return () => unsubAtt();
   }, [profile]);
 
+  // Fire confetti if they are in the perfect normal range!
+  useEffect(() => {
+    if (profile?.height && profile?.weight) {
+      const hInMeters = parseFloat(profile.height) / 100;
+      const wInKg = parseFloat(profile.weight);
+      if (hInMeters > 0) {
+        const bmiVal = parseFloat((wInKg / (hInMeters * hInMeters)).toFixed(1));
+        if (bmiVal >= 18.5 && bmiVal <= 22.9) {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#2ed573', '#ffffff', '#eccc68'],
+            disableForReducedMotion: true
+          });
+        }
+      }
+    }
+  }, [profile?.height, profile?.weight]);
+
   if (!profile) {
     return (
       <div className="members-container animate-fade-in" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
@@ -89,19 +109,6 @@ export default function MemberDashboard() {
       targetWeightRange = `${minWeight} kg - ${maxWeight} kg`;
     }
   }
-
-  // Fire confetti if they are in the perfect normal range!
-  useEffect(() => {
-    if (bmiCategory === 'Normal (Indian Standard)') {
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#2ed573', '#ffffff', '#eccc68'],
-        disableForReducedMotion: true
-      });
-    }
-  }, [bmiCategory]);
 
   // Generate Progress Description and Chart Data
   let progressDescription = "";

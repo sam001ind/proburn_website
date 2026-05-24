@@ -60,6 +60,23 @@ export default function MemberDashboard() {
     return (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
+  // Calculate BMI
+  let bmi = null;
+  let bmiCategory = '';
+  let bmiColor = '';
+  if (profile.height && profile.weight) {
+    const hInMeters = parseFloat(profile.height) / 100;
+    const wInKg = parseFloat(profile.weight);
+    if (hInMeters > 0) {
+      bmi = (wInKg / (hInMeters * hInMeters)).toFixed(1);
+      const bmiVal = parseFloat(bmi);
+      if (bmiVal < 18.5) { bmiCategory = 'Underweight'; bmiColor = '#ffb142'; }
+      else if (bmiVal <= 22.9) { bmiCategory = 'Normal (Indian Standard)'; bmiColor = '#2ed573'; }
+      else if (bmiVal <= 24.9) { bmiCategory = 'Overweight'; bmiColor = '#eccc68'; }
+      else { bmiCategory = 'Obese'; bmiColor = '#ff4757'; }
+    }
+  }
+
   return (
     <div className="members-container animate-fade-in">
       <div className="admin-header">
@@ -92,6 +109,30 @@ export default function MemberDashboard() {
           </div>
         </div>
       </div>
+
+      {profile.height && profile.weight && (
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem' }}>
+          <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+            <Activity size={20} className="text-accent" />
+            Health Analytics
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center' }}>
+            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.height} cm</p>
+            </div>
+            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Weight</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.weight} kg</p>
+            </div>
+            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: `1px solid ${bmiColor}` }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>BMI</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 0.5rem 0', color: bmiColor }}>{bmi}</p>
+              <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor }}>{bmiCategory}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="members-table-container glass-panel">
         <h3 style={{ padding: '1.5rem', margin: 0, borderBottom: '1px solid var(--border)' }}>Recent Gym Activity</h3>

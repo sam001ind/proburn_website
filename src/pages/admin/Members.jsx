@@ -23,12 +23,14 @@ export default function Members() {
     plan: 'Basic',
     duration: '30',
     joined: new Date().toISOString().split('T')[0],
-    photoURL: ''
+    photoURL: '',
+    height: '',
+    weight: ''
   });
 
   const openAddModal = () => {
     setEditingMemberId(null);
-    setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '' });
+    setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '', height: '', weight: '' });
     setIsModalOpen(true);
   };
 
@@ -41,7 +43,9 @@ export default function Members() {
       plan: member.plan === 'N/A' ? 'Basic' : member.plan,
       duration: member.expiry ? member.expiry.toString() : '30',
       joined: new Date().toISOString().split('T')[0], // Assuming we don't edit joined date, just reset form picker to today
-      photoURL: member.photoURL || ''
+      photoURL: member.photoURL || '',
+      height: member.height || '',
+      weight: member.weight || ''
     });
     setIsModalOpen(true);
   };
@@ -106,7 +110,9 @@ export default function Members() {
           role: formData.role,
           plan: isStaff ? 'N/A' : formData.plan,
           expiry: isStaff ? 999 : parseInt(formData.duration),
-          photoURL: formData.photoURL
+          photoURL: formData.photoURL,
+          height: formData.height,
+          weight: formData.weight
         });
       } else {
         const newMember = {
@@ -118,13 +124,15 @@ export default function Members() {
           status: 'Active',
           joined: new Date(formData.joined).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
           expiry: isStaff ? 999 : parseInt(formData.duration),
-          photoURL: formData.photoURL
+          photoURL: formData.photoURL,
+          height: formData.height,
+          weight: formData.weight
         };
         await addDoc(collection(db, 'members'), newMember);
       }
       setIsModalOpen(false);
       setEditingMemberId(null);
-      setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '' });
+      setFormData({ name: '', email: '', role: 'Member', plan: 'Basic', duration: '30', joined: new Date().toISOString().split('T')[0], photoURL: '', height: '', weight: '' });
     } catch (err) {
       alert("Error saving member: " + err.message);
     }
@@ -242,6 +250,16 @@ export default function Members() {
           <div className="form-group">
             <label>Email Address</label>
             <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="e.g. member@email.com" />
+          </div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Height (cm)</label>
+              <input type="number" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})} placeholder="e.g. 175" />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Weight (kg)</label>
+              <input type="number" step="0.1" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} placeholder="e.g. 70.5" />
+            </div>
           </div>
           <div className="form-group">
             <label>Role</label>

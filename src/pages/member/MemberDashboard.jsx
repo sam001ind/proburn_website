@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import Modal from '../../components/Modal';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import confetti from 'canvas-confetti';
 import '../admin/Admin.css';
 
 export default function MemberDashboard() {
@@ -82,6 +83,19 @@ export default function MemberDashboard() {
       else { bmiCategory = 'Obese'; bmiColor = '#ff4757'; }
     }
   }
+
+  // Fire confetti if they are in the perfect normal range!
+  useEffect(() => {
+    if (bmiCategory === 'Normal (Indian Standard)') {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2ed573', '#ffffff', '#eccc68'],
+        disableForReducedMotion: true
+      });
+    }
+  }, [bmiCategory]);
 
   // Generate Progress Description and Chart Data
   let progressDescription = "";
@@ -316,10 +330,10 @@ export default function MemberDashboard() {
                       <Line 
                         type="monotone" 
                         dataKey="weight" 
-                        stroke="var(--accent)" 
-                        strokeWidth={3} 
-                        dot={{ fill: 'var(--accent)', strokeWidth: 2, r: 4 }} 
-                        activeDot={{ r: 6, fill: '#fff' }} 
+                        stroke={bmiColor || "var(--accent)"} 
+                        strokeWidth={4} 
+                        dot={{ fill: bmiColor || 'var(--accent)', strokeWidth: 2, r: 5 }} 
+                        activeDot={{ r: 7, fill: '#fff' }} 
                         animationDuration={1500}
                       />
                     </LineChart>

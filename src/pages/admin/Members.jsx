@@ -108,7 +108,14 @@ export default function Members() {
     
     try {
       if (editingMemberId) {
+        const oldMember = allMembers.find(m => m.id === editingMemberId);
         const memberRef = doc(db, 'members', editingMemberId);
+        
+        let newHistory = oldMember.weightHistory || [];
+        if (formData.weight && formData.weight !== oldMember.weight) {
+          newHistory = [...newHistory, { weight: formData.weight, date: new Date().toISOString() }];
+        }
+        
         await updateDoc(memberRef, {
           name: formData.name,
           email: formData.email,
@@ -117,7 +124,8 @@ export default function Members() {
           expiry: isStaff ? 999 : parseInt(formData.duration),
           photoURL: formData.photoURL,
           height: formData.height,
-          weight: formData.weight
+          weight: formData.weight,
+          weightHistory: newHistory
         });
       } else {
         const newMember = {
@@ -131,7 +139,8 @@ export default function Members() {
           expiry: isStaff ? 999 : parseInt(formData.duration),
           photoURL: formData.photoURL,
           height: formData.height,
-          weight: formData.weight
+          weight: formData.weight,
+          weightHistory: formData.weight ? [{ weight: formData.weight, date: new Date().toISOString() }] : []
         };
         await addDoc(collection(db, 'members'), newMember);
       }

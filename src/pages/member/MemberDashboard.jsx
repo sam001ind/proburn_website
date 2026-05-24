@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Activity, Calendar, Award, Info } from 'lucide-react';
+import { Activity, Calendar, Award, Info, TrendingUp, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import Modal from '../../components/Modal';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import '../admin/Admin.css';
 
 export default function MemberDashboard() {
@@ -12,6 +14,8 @@ export default function MemberDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showBmiInfo, setShowBmiInfo] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [newWeight, setNewWeight] = useState('');
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -79,6 +83,62 @@ export default function MemberDashboard() {
     }
   }
 
+  // Generate Progress Description and Chart Data
+  let progressDescription = "";
+  let historyData = [];
+  if (profile?.weightHistory && profile.weightHistory.length > 0) {
+    historyData = profile.weightHistory.map(entry => ({
+      date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      weight: parseFloat(entry.weight)
+    }));
+
+    if (profile.weightHistory.length >= 2) {
+      const firstWeight = parseFloat(profile.weightHistory[0].weight);
+      const lastWeight = parseFloat(profile.weightHistory[profile.weightHistory.length - 1].weight);
+      const diff = (lastWeight - firstWeight).toFixed(1);
+      
+      const isUnderweight = bmiCategory === 'Underweight';
+      
+      if (diff < 0) {
+        if (isUnderweight) {
+          progressDescription = `You've lost ${Math.abs(diff)} kg. Since you are underweight, consider increasing your caloric intake to build mass.`;
+        } else {
+          progressDescription = `Great progress! You've lost ${Math.abs(diff)} kg since you started tracking. Keep it up!`;
+        }
+      } else if (diff > 0) {
+        if (isUnderweight) {
+          progressDescription = `Awesome! You've gained ${diff} kg. This is great progress towards a healthy weight!`;
+        } else {
+          progressDescription = `You've gained ${diff} kg since you started tracking. Focus on your workout and diet plans!`;
+        }
+      } else {
+        progressDescription = `Your weight has remained stable since you started tracking.`;
+      }
+    }
+  }
+
+  const handleLogWeight = async (e) => {
+    e.preventDefault();
+    if (!profile?.id || !newWeight) return;
+    try {
+      const newHistory = [...(profile.weightHistory || [])];
+      // If the profile didn't have history before, seed the current DB weight as the first entry so we get a line
+      if (newHistory.length === 0 && profile.weight) {
+         newHistory.push({ weight: profile.weight, date: new Date(profile.joined).toISOString() });
+      }
+      newHistory.push({ weight: newWeight, date: new Date().toISOString() });
+      
+      await updateDoc(doc(db, 'members', profile.id), {
+        weight: newWeight,
+        weightHistory: newHistory
+      });
+      setShowLogModal(false);
+      setNewWeight('');
+    } catch (err) {
+      alert("Error logging weight: " + err.message);
+    }
+  };
+
   return (
     <div className="members-container animate-fade-in">
       <div className="admin-header">
@@ -119,7 +179,28 @@ export default function MemberDashboard() {
             Health Analytics
             <Info size={18} className="text-secondary" style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => setShowBmiInfo(true)} />
           </h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => setShowLogModal(true)} className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Plus size={16} /> Log Weight
+            </button>
+            <button onClick={() => setShowBmiInfo(!showBmiInfo)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', padding: '0.4rem 0.8rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.8rem' }}>
+              {showBmiInfo ? 'Hide Info' : 'What is this?'}
+            </button>
+          </div>
         </div>
+
+        <Modal isOpen={showLogModal} onClose={() => setShowLogModal(false)} title="Log New Weight">
+          <form className="modal-form" onSubmit={handleLogWeight}>
+            <div className="form-group">
+              <label>Current Weight (kg)</label>
+              <input type="number" step="0.1" required value={newWeight} onChange={(e) => setNewWeight(e.target.value)} placeholder="e.g. 71.5" />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-outline" onClick={() => setShowLogModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Save Weight</button>
+            </div>
+          </form>
+        </Modal>
 
         <Modal isOpen={showBmiInfo} onClose={() => setShowBmiInfo(false)} title="Understanding Your BMI">
           <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
@@ -179,21 +260,58 @@ export default function MemberDashboard() {
         </Modal>
 
         {profile.height && profile.weight ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center' }}>
-            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.height} cm</p>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Height</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.height} cm</p>
+              </div>
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Weight</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.weight} kg</p>
+              </div>
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: `1px solid ${bmiColor}` }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Current BMI</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 0.5rem 0', color: bmiColor }}>{bmi}</p>
+                <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor }}>{bmiCategory}</span>
+              </div>
             </div>
-            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Weight</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{profile.weight} kg</p>
-            </div>
-            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: `1px solid ${bmiColor}` }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.5rem 0' }}>Current BMI</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 0.5rem 0', color: bmiColor }}>{bmi}</p>
-              <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', color: bmiColor }}>{bmiCategory}</span>
-            </div>
-          </div>
+
+            {historyData.length >= 2 && (
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h4 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                  <TrendingUp size={18} className="text-accent" />
+                  Weight Progress Trend
+                </h4>
+                {progressDescription && (
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+                    {progressDescription}
+                  </p>
+                )}
+                <div style={{ width: '100%', height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historyData}>
+                      <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis domain={['auto', 'auto']} stroke="rgba(255,255,255,0.5)" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                        itemStyle={{ color: 'var(--accent)' }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="weight" 
+                        stroke="var(--accent)" 
+                        strokeWidth={3} 
+                        dot={{ fill: 'var(--accent)', strokeWidth: 2, r: 4 }} 
+                        activeDot={{ r: 6, fill: '#fff' }} 
+                        animationDuration={1500}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Your height and weight haven't been added yet.</p>

@@ -11,6 +11,7 @@ export default function Members() {
   const filterQuery = searchParams.get('filter');
   
   const [allMembers, setAllMembers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal State
@@ -52,12 +53,16 @@ export default function Members() {
 
   // Live Database Listener
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'members'), (snapshot) => {
+    const unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllMembers(membersData);
       setLoading(false);
     });
-    return () => unsubscribe();
+    const unsubRoles = onSnapshot(collection(db, 'roles'), (snapshot) => {
+      const rolesData = snapshot.docs.map(doc => doc.data());
+      setRoles(rolesData);
+    });
+    return () => { unsubMembers(); unsubRoles(); };
   }, []);
 
   const seedDatabase = async () => {
@@ -99,7 +104,7 @@ export default function Members() {
 
   const handleAddMember = async (e) => {
     e.preventDefault();
-    const isStaff = formData.role === 'Staff';
+    const isStaff = formData.role !== 'Member';
     
     try {
       if (editingMemberId) {
@@ -265,7 +270,10 @@ export default function Members() {
             <label>Role</label>
             <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
               <option value="Member">Gym Member</option>
-              <option value="Staff">Staff / Trainer</option>
+              <option value="Super Admin">Super Admin</option>
+              {roles.filter(r => r.name !== 'Super Admin').map(r => (
+                <option key={r.name} value={r.name}>{r.name}</option>
+              ))}
             </select>
           </div>
           {formData.role === 'Member' && (

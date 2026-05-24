@@ -11,6 +11,7 @@ import MemberBilling from './pages/member/MemberBilling';
 import Members from './pages/admin/Members';
 import Billing from './pages/admin/Billing';
 import Attendance from './pages/admin/Attendance';
+import Roles from './pages/admin/Roles';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -44,6 +45,7 @@ function App() {
             <Route path="members" element={<Members />} />
             <Route path="billing" element={<Billing />} />
             <Route path="attendance" element={<Attendance />} />
+            <Route path="roles" element={<Roles />} />
           </Route>
         </Routes>
       </BrowserRouter>

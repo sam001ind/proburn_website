@@ -1,12 +1,49 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, LogOut, Settings, CreditCard, Clock } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, Settings, CreditCard, Clock, Shield } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { currentUser } = useAuth();
+  const [userRoleData, setUserRoleData] = useState(null);
+
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    
+    // 1. Fetch user's role string from members collection
+    const qMember = query(collection(db, 'members'), where('email', '==', currentUser.email));
+    const unsubMember = onSnapshot(qMember, (memberSnap) => {
+      if (!memberSnap.empty) {
+        const memberData = memberSnap.docs[0].data();
+        const roleName = memberData.role || 'Member';
+        
+        // 2. Fetch the role's permissions from roles collection
+        const qRole = query(collection(db, 'roles'), where('name', '==', roleName));
+        onSnapshot(qRole, (roleSnap) => {
+          if (!roleSnap.empty) {
+            setUserRoleData({ name: roleName, ...roleSnap.docs[0].data() });
+          } else {
+            // Default basic role info if custom role deleted or missing
+            setUserRoleData({ name: roleName, permissions: { menus: [], widgets: [] } });
+          }
+        });
+      } else {
+        // Fallback for default admin account
+        if (currentUser.email === 'admin@gym.com' || currentUser.email === 'abijiththekkekkara@gmail.com') {
+           setUserRoleData({ name: 'Super Admin' });
+        }
+      }
+    });
+
+    return () => unsubMember();
+  }, [currentUser]);
 
   const handleLogout = async () => {
     try {
@@ -18,13 +55,18 @@ export default function AdminLayout() {
   };
 
   const navItems = [
-    { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Overview' },
-    { path: '/admin/members', icon: <Users size={20} />, label: 'Members' },
-    { path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance' },
-    { path: '/admin/classes', icon: <Calendar size={20} />, label: 'Classes' },
-    { path: '/admin/billing', icon: <CreditCard size={20} />, label: 'Billing' },
-    { path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
+    { id: 'dashboard', path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Overview' },
+    { id: 'members', path: '/admin/members', icon: <Users size={20} />, label: 'Members' },
+    { id: 'attendance', path: '/admin/attendance', icon: <Clock size={20} />, label: 'Attendance' },
+    { id: 'billing', path: '/admin/billing', icon: <CreditCard size={20} />, label: 'Billing' },
+    { id: 'roles', path: '/admin/roles', icon: <Shield size={20} />, label: 'Roles' },
   ];
+
+  // RBAC Filtering logic for sidebar
+  const visibleNavItems = navItems.filter(item => {
+    if (userRoleData?.name === 'Super Admin') return true;
+    return userRoleData?.permissions?.menus?.includes(item.id);
+  });
 
   return (
     <div className="admin-layout">
@@ -35,11 +77,11 @@ export default function AdminLayout() {
         </div>
         
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link 
               key={item.path} 
-              to={item.path}
-              className={`sidebar-link ${location.pathname === item.path ? 'active' : ''}`}
+              to={item.path === '/admin' ? '/admin/dashboard' : item.path}
+              className={`sidebar-link ${(location.pathname === item.path || location.pathname === item.path + '/dashboard') ? 'active' : ''}`}
             >
               {item.icon}
               <span>{item.label}</span>

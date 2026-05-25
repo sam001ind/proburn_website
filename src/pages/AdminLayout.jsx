@@ -82,18 +82,13 @@ export default function AdminLayout() {
       badge: newLeadsCount > 0 ? newLeadsCount : null
     },
     { 
-      id: 'homepage', 
+      id: 'website', 
       icon: <Home size={20} />, 
-      label: 'Homepage',
+      label: 'Website Builder',
       subMenus: [
-        { path: '/admin/homepage/sections',  label: '📱 Section Manager' },
-        { path: '/admin/homepage/navbar',    label: '🔝 Navbar' },
-        { path: '/admin/homepage/branding',  label: '🎨 Branding & Logo' },
-        { path: '/admin/homepage/hero',      label: '🏠 Hero Banner' },
-        { path: '/admin/homepage/features',  label: '⚡ Features' },
-        { path: '/admin/homepage/classes',   label: '📅 Classes' },
-        { path: '/admin/homepage/plans',     label: '💳 Plans' },
-        { path: '/admin/homepage/contact',   label: '📍 Contact & Footer' },
+        { path: '/admin/website/pages',      label: '📄 Pages' },
+        { path: '/admin/website/navigation', label: '🔗 Navigation' },
+        { path: '/admin/website/theme',      label: '🎨 Theme Settings' },
       ]
     },
     { 
@@ -121,8 +116,8 @@ export default function AdminLayout() {
 
   // RBAC Filtering logic for sidebar
   const visibleNavItems = navItems.filter(item => {
-    // Hide Homepage completely if running as native mobile app
-    if (Capacitor.isNativePlatform() && item.id === 'homepage') return false;
+    // Hide Website Builder completely if running as native mobile app
+    if (Capacitor.isNativePlatform() && item.id === 'website') return false;
     
     if (userRoleData?.name === 'Super Admin') return true;
     return userRoleData?.permissions?.menus?.includes(item.id);

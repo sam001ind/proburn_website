@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import HomePage from './pages/HomePage';
+import DynamicPage from './pages/DynamicPage';
 import Login from './pages/Login';
 import AdminLayout from './pages/AdminLayout';
 import MemberLayout from './pages/member/MemberLayout';
@@ -19,13 +19,10 @@ import Plans from './pages/admin/settings/Plans';
 import Roles from './pages/admin/Roles';
 import Leads from './pages/admin/Leads';
 import Branches from './pages/admin/settings/Branches';
-import HeroEditor from './pages/admin/homepage/HeroEditor';
-import FeaturesEditor from './pages/admin/homepage/FeaturesEditor';
-import ClassesEditor from './pages/admin/homepage/ClassesEditor';
-import ContactEditor from './pages/admin/homepage/ContactEditor';
-import BrandingEditor from './pages/admin/homepage/BrandingEditor';
-import NavbarEditor from './pages/admin/homepage/NavbarEditor';
-import SectionsManager from './pages/admin/homepage/SectionsManager';
+import PagesList from './pages/admin/website/PagesList';
+import PageEditor from './pages/admin/website/PageEditor';
+import NavigationEditor from './pages/admin/website/NavigationEditor';
+import ThemeEditor from './pages/admin/website/ThemeEditor';
 import ClockInSettings from './pages/admin/settings/ClockInSettings';
 import { AuthProvider } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
@@ -37,7 +34,7 @@ function App() {
       <BranchProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
-          <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/login" replace /> : <HomePage />} />
+          <Route path="/" element={<DynamicPage isHome={true} />} />
           <Route path="/login" element={<Login />} />
           
           <Route path="/member" element={
@@ -64,16 +61,12 @@ function App() {
             <Route path="billing" element={<Billing />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="leads" element={<Leads />} />
-            <Route path="homepage">
-              <Route index element={<Navigate to="navbar" replace />} />
-              <Route path="navbar" element={<NavbarEditor />} />
-              <Route path="branding" element={<BrandingEditor />} />
-              <Route path="sections" element={<SectionsManager />} />
-              <Route path="hero" element={<HeroEditor />} />
-              <Route path="features" element={<FeaturesEditor />} />
-              <Route path="classes" element={<ClassesEditor />} />
-              <Route path="plans" element={<Plans />} />
-              <Route path="contact" element={<ContactEditor />} />
+            <Route path="website">
+              <Route index element={<Navigate to="pages" replace />} />
+              <Route path="pages" element={<PagesList />} />
+              <Route path="pages/:pageId" element={<PageEditor />} />
+              <Route path="navigation" element={<NavigationEditor />} />
+              <Route path="theme" element={<ThemeEditor />} />
             </Route>
             <Route path="settings">
               <Route index element={<Navigate to="clockin" replace />} />
@@ -84,6 +77,8 @@ function App() {
               <Route path="branches" element={<Branches />} />
             </Route>
           </Route>
+          {/* Dynamic Pages Fallback (must be at the bottom) */}
+          <Route path="/:slug" element={<DynamicPage />} />
         </Routes>
       </BrowserRouter>
       </BranchProvider>

@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { Upload, X, CheckCircle, AlertCircle, Crop, ZoomIn, ZoomOut } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import './ImageUpload.css';
 
 /* ─── Crop raw pixels → compressed base64 JPEG ─── */
@@ -68,6 +70,23 @@ export default function ImageUpload({
     const reader = new FileReader();
     reader.onload = () => { setRawSrc(reader.result); setCrop({ x: 0, y: 0 }); setZoom(1); };
     reader.readAsDataURL(file);
+  };
+
+  const handleCamera = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt
+      });
+      setError(''); setDone(false);
+      setRawSrc(image.dataUrl);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+    } catch (e) {
+      console.log('Camera error/cancelled:', e);
+    }
   };
 
   const onCropComplete = useCallback((_, areaPixels) => setCroppedArea(areaPixels), []);
@@ -203,7 +222,15 @@ export default function ImageUpload({
       {/* ── Drop Zone ── */}
       <div
         className={`img-upload-dropzone ${value ? 'has-image' : ''}`}
-        onClick={() => !rawSrc && inputRef.current?.click()}
+        onClick={() => {
+          if (!rawSrc) {
+            if (Capacitor.isNativePlatform()) {
+              handleCamera();
+            } else {
+              inputRef.current?.click();
+            }
+          }
+        }}
         onDragOver={e => e.preventDefault()}
         onDrop={handleDrop}
       >

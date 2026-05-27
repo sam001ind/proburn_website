@@ -116,13 +116,14 @@ export default function SiteBuilder() {
       if (snap.exists()) setTheme(snap.data());
     });
 
-    const unsubNav = onSnapshot(doc(db, 'website_settings', `${activeGymId}_navigation`), (snap) => {
-      if (snap.exists() && snap.data().links) setNavLinks(snap.data().links);
-      else setNavLinks([{ label: 'Home', path: '/' }, { label: 'Classes', path: '/classes' }]);
-    });
-
-    return () => { unsubPages(); unsubTheme(); unsubNav(); };
+    return () => { unsubPages(); unsubTheme(); };
   }, [activeGymId, activePageId]);
+
+  // Derive Navigation Links directly from Pages (Google Sites style)
+  const navLinks = pages.map(p => ({
+    label: p.title,
+    path: p.isHome ? '/' : `/${p.slug}`
+  }));
 
   // Derived active page
   const activePage = pages.find(p => p.id === activePageId);
@@ -178,11 +179,13 @@ export default function SiteBuilder() {
   };
   
   const deletePage = async (id) => {
-    if(confirm("Delete this page?")) await deleteDoc(doc(db, 'website_pages', id));
-  };
-
-  const saveNav = async (newLinks) => {
-    await setDoc(doc(db, 'website_settings', `${activeGymId}_navigation`), { links: newLinks, gymId: activeGymId, type: 'navigation' });
+    if(confirm("Delete this page?")) {
+      await deleteDoc(doc(db, 'website_pages', id));
+      if (activePageId === id) {
+        const homePage = pages.find(p => p.isHome) || pages[0];
+        if (homePage) setActivePageId(homePage.id);
+      }
+    }
   };
 
   // Theme Logic
@@ -366,22 +369,8 @@ export default function SiteBuilder() {
                 ))}
               </div>
 
-              <hr style={{ borderColor: 'rgba(255,255,255,0.05)', margin: '1.5rem 0' }} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1rem', margin: 0 }}>Navigation Menu</h3>
-                <button className="btn-icon" onClick={() => saveNav([...navLinks, { label: 'New Link', path: '/' }])}><Plus size={18} color="var(--accent)"/></button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                {navLinks.map((link, idx) => (
-                  <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <input type="text" className="form-input" style={{ flex: 1, padding: '0.4rem', fontSize: '0.85rem' }} value={link.label} onChange={e => { const n = [...navLinks]; n[idx].label = e.target.value; setNavLinks(n); }} onBlur={() => saveNav(navLinks)} />
-                      <input type="text" className="form-input" style={{ flex: 1, padding: '0.4rem', fontSize: '0.85rem' }} value={link.path} onChange={e => { const n = [...navLinks]; n[idx].path = e.target.value; setNavLinks(n); }} onBlur={() => saveNav(navLinks)} />
-                      <button className="btn-icon" style={{ color: '#ff4444' }} onClick={() => { const n = navLinks.filter((_, i) => i !== idx); setNavLinks(n); saveNav(n); }}><Trash2 size={14}/></button>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <p><strong>Note:</strong> Your navigation menu is automatically generated from these pages.</p>
               </div>
             </div>
           )}

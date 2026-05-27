@@ -1,7 +1,7 @@
 import { Dumbbell, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useTenant } from '../context/TenantContext';
 import './Navbar.css';
@@ -48,13 +48,18 @@ export default function Navbar() {
       }
     });
 
-    const unsubNav = onSnapshot(doc(db, 'website_settings', `${activeGymId}_navigation`), (snap) => {
-      if (snap.exists() && snap.data().links) {
-        setBranding(prev => ({ ...prev, navLinks: snap.data().links }));
+    const unsubPages = onSnapshot(query(collection(db, 'website_pages'), where('gymId', '==', activeGymId)), (snap) => {
+      const pages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const dynamicNavLinks = pages.map(p => ({
+        label: p.title,
+        path: p.isHome ? '/' : `/${p.slug}`
+      }));
+      if (dynamicNavLinks.length > 0) {
+        setBranding(prev => ({ ...prev, navLinks: dynamicNavLinks }));
       }
     });
 
-    return () => { unsubTheme(); unsubNav(); };
+    return () => { unsubTheme(); unsubPages(); };
   }, [activeGymId]);
 
   const {

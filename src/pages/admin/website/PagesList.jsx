@@ -93,7 +93,7 @@ export default function PagesList() {
                       </div>
                     </td>
                     <td>
-                      <a href={`/${activeGymId}${page.isHome ? '' : `/${page.slug}`}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
+                      <a href={`${window.location.origin}/${activeGymId}${page.isHome ? '' : `/${page.slug}`}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
                         /{page.isHome ? '' : page.slug} <ExternalLink size={12} />
                       </a>
                     </td>

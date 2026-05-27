@@ -145,7 +145,7 @@ export default function SuperDashboard() {
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <Link to={`/superadmin/website/${gym.slug}/pages`} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>Build Website</Link>
-              <a href={`/${gym.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</a>
+              <a href={`${window.location.origin}/${gym.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</a>
             </div>
           </div>
         ))}
@@ -173,7 +173,7 @@ export default function SuperDashboard() {
               onChange={e => setFormData({...formData, slug: e.target.value})}
               placeholder="e.g. proburn-fitness" 
             />
-            <small style={{color: 'var(--text-muted)'}}>This will be used for the URL: /proburn_website/slug</small>
+            <small style={{color: 'var(--text-muted)'}}>This will be used for the URL: /{formData.slug || 'slug'}</small>
           </div>
           {!editingGymId && (
             <div className="form-group">

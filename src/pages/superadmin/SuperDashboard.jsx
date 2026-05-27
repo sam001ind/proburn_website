@@ -145,7 +145,7 @@ export default function SuperDashboard() {
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <Link to={`/superadmin/website/${gym.slug}/pages`} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>Build Website</Link>
-              <a href={`${window.location.origin}/${gym.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</a>
+              <button onClick={() => window.open(`/${gym.slug}`, '_blank')} className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</button>
             </div>
           </div>
         ))}

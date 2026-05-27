@@ -33,6 +33,12 @@ import { BranchProvider } from './context/BranchContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { TenantProvider } from './context/TenantContext';
 
+function LegacyRedirect() {
+  const currentPath = window.location.pathname;
+  const newPath = currentPath.replace('/proburn_website', '') || '/';
+  return <Navigate to={newPath} replace />;
+}
+
 function App() {
   return (
     <TenantProvider>
@@ -40,6 +46,9 @@ function App() {
       <BranchProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
+          {/* Legacy URL redirect for old bookmarks */}
+          <Route path="/proburn_website/*" element={<LegacyRedirect />} />
+
           {/* SaaS Admin Portal routes */}
           <Route path="/fitpat/login" element={<Login />} />
 

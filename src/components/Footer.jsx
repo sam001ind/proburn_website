@@ -1,8 +1,10 @@
 import { MapPin, Phone, Mail } from 'lucide-react';
 import './Footer.css';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useTenant } from '../context/TenantContext';
 
 const defaults = {
   gymName: 'PROBURN',
@@ -19,18 +21,25 @@ const defaults = {
 };
 
 export default function Footer() {
+  const { activeGymId, activeGymData } = useTenant();
   const [data, setData] = useState(defaults);
+  const [navLinks, setNavLinks] = useState([
+    { label: 'Home', path: '/' },
+    { label: 'Classes', path: '/classes' },
+    { label: 'Pricing', path: '/pricing' }
+  ]);
 
   useEffect(() => {
+    if (!activeGymId) return;
+
     // Read contact from homepage/contact
     const unsubContact = onSnapshot(doc(db, 'homepage', 'contact'), (snap) => {
       if (snap.exists()) setData(d => ({ ...d, ...snap.data() }));
     });
-    // Override gym name / logo from active branch
-    const unsubBranch = onSnapshot(collection(db, 'branches'), (snap) => {
+    // Override gym name / logo from active branch (scoped to gymId)
+    const unsubBranch = onSnapshot(query(collection(db, 'branches'), where('gymId', '==', activeGymId)), (snap) => {
       if (!snap.empty) {
-        const saved = localStorage.getItem('activeBranchId');
-        const match = snap.docs.find(d => d.id === saved) || snap.docs[0];
+        const match = snap.docs[0];
         if (match) {
           const b = match.data();
           setData(d => ({
@@ -50,7 +59,26 @@ export default function Footer() {
         }
       }
     });
-    return () => { unsubContact(); unsubBranch(); };
+
+    const unsubNav = onSnapshot(doc(db, 'website_settings', `${activeGymId}_navigation`), (snap) => {
+      if (snap.exists() && snap.data().links) {
+        setNavLinks(snap.data().links);
+      }
+    });
+
+    const unsubTheme = onSnapshot(doc(db, 'website_settings', 'theme'), (snap) => {
+      if (snap.exists()) {
+        const themeData = snap.data();
+        setData(d => ({
+          ...d,
+          gymName: themeData.logoText || d.gymName,
+          gymNameHighlight: themeData.logoHighlight || '',
+          logoURL: themeData.logoUrl || d.logoURL,
+        }));
+      }
+    });
+
+    return () => { unsubContact(); unsubBranch(); unsubNav(); unsubTheme(); };
   }, []);
 
   const { gymName, gymNameHighlight, tagline, address, phone, email, instagramUrl, facebookUrl, twitterUrl, copyrightName, logoURL } = data;
@@ -77,12 +105,18 @@ export default function Footer() {
 
         <div className="footer-links">
           <h3>Quick Links</h3>
-          <ul>
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#classes">Classes</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-          </ul>
+            <ul className="footer-links">
+              {navLinks.map((link, idx) => {
+                const href = link.isExternal ? link.path : `/${activeGymId}${link.path === '/' ? '' : link.path}`;
+                return (
+                  <li key={idx}>
+                    <a href={href} target={link.isExternal ? '_blank' : '_self'} rel={link.isExternal ? 'noreferrer' : ''}>
+                      {link.label}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
         </div>
 
         <div className="footer-contact">

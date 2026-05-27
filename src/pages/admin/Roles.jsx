@@ -1,7 +1,8 @@
 import { Shield, Plus, Edit2, Trash2, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, query, where } from "firebase/firestore";;
+import { db } from '../../firebase'; 
+import { useTenant } from '../../context/TenantContext';
 import Modal from '../../components/Modal';
 import './Admin.css';
 
@@ -37,6 +38,7 @@ const PERMISSION_TREE = [
 ];
 
 export default function Roles() {
+  const { activeGymId } = useTenant();
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,8 +61,10 @@ export default function Roles() {
   };
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'roles'), (snapshot) => {
-      const rolesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribe = onSnapshot(query(collection(db, 'roles'), where('gymId', '==', activeGymId)), (snapshot) => {
+      const rolesData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(r => r.name !== 'Super Admin');
       setRoles(rolesData);
       setLoading(false);
     });
@@ -146,14 +150,14 @@ export default function Roles() {
           }
         });
       } else {
-        await addDoc(collection(db, 'roles'), {
+        await addDoc(collection(db, 'roles'), { gymId: activeGymId, 
           name: formData.name,
           maxUsers: maxUsersInt,
           permissions: {
             menus: formData.menus,
             widgets: formData.widgets
           }
-        });
+         });
       }
       setIsModalOpen(false);
     } catch (err) {

@@ -4,6 +4,7 @@ import { db } from '../../../firebase';
 import { FileText, Plus, Edit, Trash2, Home, ExternalLink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Modal from '../../../components/Modal';
+import { useTenant } from '../../../context/TenantContext';
 
 export default function PagesList() {
   const [pages, setPages] = useState([]);
@@ -11,9 +12,11 @@ export default function PagesList() {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ title: '', slug: '', isHome: false });
   const navigate = useNavigate();
+  const { activeGymId, activeGymData } = useTenant();
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'website_pages'), (snap) => {
+    if (!activeGymId) return;
+    const unsub = onSnapshot(query(collection(db, 'website_pages'), where('gymId', '==', activeGymId)), (snap) => {
       setPages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
@@ -27,6 +30,7 @@ export default function PagesList() {
       
       // If marking as home, unset other home pages (optional logic here, skipping for simplicity)
       await addDoc(collection(db, 'website_pages'), {
+        gymId: activeGymId,
         title: formData.title,
         slug: slug,
         isHome: formData.isHome,
@@ -88,7 +92,7 @@ export default function PagesList() {
                       </div>
                     </td>
                     <td>
-                      <a href={page.isHome ? '/' : `/${page.slug}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
+                      <a href={`/${activeGymData?.slug || 'proburn'}${page.isHome ? '' : `/${page.slug}`}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
                         /{page.isHome ? '' : page.slug} <ExternalLink size={12} />
                       </a>
                     </td>

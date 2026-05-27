@@ -1,8 +1,9 @@
 import { Dumbbell, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useTenant } from '../context/TenantContext';
 import './Navbar.css';
 
 const DEFAULTS = {
@@ -24,6 +25,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [branding, setBranding] = useState(DEFAULTS);
+  const { activeGymId, activeGymData } = useTenant();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -31,24 +33,29 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Listen to active branch — reads everything including nav links
+  // Fetch Theme and Navigation from CMS
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'branches'), (snap) => {
-      if (!snap.empty) {
-        const saved = localStorage.getItem('activeBranchId');
-        const match = snap.docs.find(d => d.id === saved) || snap.docs[0];
-        if (match) {
-          const d = match.data();
-          setBranding({
-            ...DEFAULTS,
-            ...d,
-            navLinks: d.navLinks || DEFAULTS.navLinks,
-          });
-        }
+    if (!activeGymId) return;
+    const unsubTheme = onSnapshot(doc(db, 'website_settings', `${activeGymId}_theme`), (snap) => {
+      if (snap.exists()) {
+        const themeData = snap.data();
+        setBranding(prev => ({
+          ...prev,
+          gymName: themeData.logoText || prev.gymName,
+          gymNameHighlight: themeData.logoHighlight || '',
+          logoURL: themeData.logoUrl || prev.logoURL,
+        }));
       }
     });
-    return () => unsub();
-  }, []);
+
+    const unsubNav = onSnapshot(doc(db, 'website_settings', `${activeGymId}_navigation`), (snap) => {
+      if (snap.exists() && snap.data().links) {
+        setBranding(prev => ({ ...prev, navLinks: snap.data().links }));
+      }
+    });
+
+    return () => { unsubTheme(); unsubNav(); };
+  }, [activeGymId]);
 
   const {
     gymName, gymNameHighlight, logoURL, showIcon,
@@ -72,9 +79,21 @@ export default function Navbar() {
 
         {/* ── Links ── */}
         <div className={`nav-menu ${isOpen ? 'active' : ''}`}>
-          {navLinks.map((link, i) => (
-            <a key={i} href={link.href} onClick={() => setIsOpen(false)}>{link.label}</a>
-          ))}
+          {navLinks.map((link, i) => {
+            const href = link.isExternal ? link.path : `/${activeGymId}${link.path === '/' ? '' : link.path}`;
+            return (
+              <a 
+                key={i} 
+                href={href}
+                className="nav-link"
+                target={link.isExternal ? '_blank' : '_self'}
+                rel={link.isExternal ? 'noreferrer' : ''}
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </a>
+            );
+          })}
           <Link to="/login" className="nav-link text-accent" onClick={() => setIsOpen(false)}>
             {portalLoginLabel || 'Portal Login'}
           </Link>

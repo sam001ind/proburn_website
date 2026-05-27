@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Home, UserPlus, Building2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useBranch } from '../context/BranchContext';
+import { useTenant } from '../context/TenantContext';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
@@ -15,12 +16,18 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const { currentUser } = useAuth();
+  const { activeGymId, activeGymData } = useTenant();
   const { branches, activeBranch, setActiveBranch } = useBranch();
   const [userRoleData, setUserRoleData] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth <= 768);
   const [expandedMenus, setExpandedMenus] = useState(['settings', 'homepage']);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+
+  // If no active gym is resolved yet, show a loading spinner or empty layout
+  if (!activeGymId && currentUser) {
+    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading Gym Workspace...</div>;
+  }
 
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -33,7 +40,7 @@ export default function AdminLayout() {
         const roleName = memberData.role || 'Member';
         
         // 2. Fetch the role's permissions from roles collection
-        const qRole = query(collection(db, 'roles'), where('name', '==', roleName));
+        const qRole = query(collection(db, 'roles'), where('name', '==', roleName), where('gymId', '==', activeGymId));
         onSnapshot(qRole, (roleSnap) => {
           if (!roleSnap.empty) {
             setUserRoleData({ name: roleName, ...roleSnap.docs[0].data() });
@@ -55,8 +62,9 @@ export default function AdminLayout() {
 
   // Live count of new leads
   useEffect(() => {
+    if (!activeGymId) return;
     const unsub = onSnapshot(
-      query(collection(db, 'leads'), where('status', '==', 'New')),
+      query(collection(db, 'leads'), where('status', '==', 'New'), where('gymId', '==', activeGymId)),
       (snap) => setNewLeadsCount(snap.size)
     );
     return () => unsub();
@@ -119,7 +127,7 @@ export default function AdminLayout() {
     // Hide Website Builder completely if running as native mobile app
     if (Capacitor.isNativePlatform() && item.id === 'website') return false;
     
-    if (userRoleData?.name === 'Super Admin') return true;
+    if (userRoleData?.name === 'Super Admin' || userRoleData?.name === 'Admin') return true;
     return userRoleData?.permissions?.menus?.includes(item.id);
   });
 
@@ -142,7 +150,7 @@ export default function AdminLayout() {
       {/* Sidebar Navigation */}
       <aside className={`admin-sidebar glass-panel ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <h2>PRO<span>BURN</span> MIS</h2>
+          <h2>{activeGymData?.name || 'PROBURN'}</h2>
           {window.innerWidth <= 768 && (
             <button onClick={() => setIsCollapsed(true)} style={{ background: 'none', border: 'none', color: 'white' }}>✕</button>
           )}

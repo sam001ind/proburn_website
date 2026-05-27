@@ -3,11 +3,13 @@ import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useBranch } from '../../context/BranchContext';
+import { useBranch } from '../../context/BranchContext'; 
+import { useTenant } from '../../context/TenantContext';
 import Modal from '../../components/Modal';
 import './Admin.css';
 
 export default function Billing() {
+  const { activeGymId } = useTenant();
   const [searchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
 
@@ -36,7 +38,7 @@ export default function Billing() {
       setLoading(false);
       return;
     }
-    const qTx = query(collection(db, 'transactions'), where('branchId', '==', activeBranch.id));
+    const qTx = query(collection(db, 'transactions'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id));
     const unsubscribe = onSnapshot(qTx, (snapshot) => {
       const txData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllTransactions(txData);
@@ -57,7 +59,7 @@ export default function Billing() {
       { transactionId: 'TRX-908', date: '2026-04-28', member: 'Jessica Taylor', type: 'Due', amount: '₹6,000', status: 'Overdue', category: 'Monthly Installment', branchId: activeBranch.id },
     ];
     for (const t of mockTransactions) {
-      await addDoc(collection(db, 'transactions'), t);
+      await addDoc(collection(db, 'transactions'), { ...t, gymId: activeGymId });
     }
     alert('Mock transactions added to Firebase!');
   };
@@ -125,7 +127,7 @@ export default function Billing() {
     };
     
     try {
-      await addDoc(collection(db, 'transactions'), newTx);
+      await addDoc(collection(db, 'transactions'), { ...newTx, gymId: activeGymId });
       setIsModalOpen(false);
       setFormData({ type: 'Income', amount: '', date: new Date().toISOString().split('T')[0], member: '', category: 'Membership Fee', status: 'Completed' });
     } catch (err) {

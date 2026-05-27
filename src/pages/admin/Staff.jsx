@@ -1,15 +1,17 @@
 import { Search, Filter, MoreVertical, Database, Edit2 } from 'lucide-react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, query, where } from "firebase/firestore";;
 import { db } from '../../firebase';
 import Modal from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 import { useAuth } from '../../context/AuthContext';
-import { useBranch } from '../../context/BranchContext';
+import { useBranch } from '../../context/BranchContext'; 
+import { useTenant } from '../../context/TenantContext';
 import './Admin.css';
 
 export default function Staff() {
+  const { activeGymId } = useTenant();
   const { currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
@@ -64,12 +66,12 @@ export default function Staff() {
       setLoading(false);
       return;
     }
-    const unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
+    const unsubMembers = onSnapshot(query(collection(db, 'members'), where('gymId', '==', activeGymId), where('gymId', '==', activeGymId)), (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllStaff(membersData.filter(m => m.role && m.role !== 'Member' && (m.branchIds?.includes(activeBranch.id) || m.branchId === activeBranch.id)));
       setLoading(false);
     });
-    const unsubRoles = onSnapshot(collection(db, 'roles'), (snapshot) => {
+    const unsubRoles = onSnapshot(query(collection(db, 'roles'), where('gymId', '==', activeGymId), where('gymId', '==', activeGymId)), (snapshot) => {
       const rolesData = snapshot.docs.map(doc => doc.data());
       setRoles(rolesData);
     });
@@ -82,7 +84,7 @@ export default function Staff() {
       { memberId: 'S-1002', name: 'John Trainer', role: 'Trainer', status: 'Active', joined: 'Jan 2024', plan: 'N/A', expiry: 999 }
     ];
     for (const m of mockStaff) {
-      await addDoc(collection(db, 'members'), m);
+      await addDoc(collection(db, 'members'), { ...m, gymId: activeGymId });
     }
     alert('Mock staff added to Firebase!');
   };
@@ -142,7 +144,7 @@ export default function Staff() {
           photoURL: formData.photoURL,
           branchIds: formData.branchIds
         };
-        await addDoc(collection(db, 'members'), newStaff);
+        await addDoc(collection(db, 'members'), { ...newStaff, gymId: activeGymId });
       }
       setIsModalOpen(false);
       setEditingMemberId(null);

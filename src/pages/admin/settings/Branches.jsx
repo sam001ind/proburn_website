@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, getDocs, query, where } from "firebase/firestore";;
+import { db } from '../../../firebase'; 
+import { useTenant } from '../../../context/TenantContext';
 import { Plus, Edit2, Trash2, Building2, DatabaseZap } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import '../Admin.css';
 
 export default function Branches() {
+  const { activeGymId } = useTenant();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +23,7 @@ export default function Branches() {
   });
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'branches'), (snap) => {
+    const unsub = onSnapshot(query(collection(db, 'branches'), where('gymId', '==', activeGymId), where('gymId', '==', activeGymId)), (snap) => {
       setBranches(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
@@ -52,7 +54,7 @@ export default function Branches() {
     if (editingId) {
       await updateDoc(doc(db, 'branches', editingId), formData);
     } else {
-      await addDoc(collection(db, 'branches'), formData);
+      await addDoc(collection(db, 'branches'), { ...formData, gymId: activeGymId });
     }
     setIsModalOpen(false);
   };

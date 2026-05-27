@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, ArrowLeft, UserPlus, Dumbbell } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { LogIn, Activity } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { useTenant } from '../context/TenantContext';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
-export default function Login() {
-  const navigate        = useNavigate();
-  const [email, setEmail]     = useState('');
+export default function FitPatLogin() {
+  const navigate = useNavigate();
+  const { setTenant } = useTenant();
+  
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { currentUser, isSuperAdmin } = useAuth();
 
@@ -19,25 +22,42 @@ export default function Login() {
     const routeExistingUser = async () => {
       if (currentUser) {
         if (isSuperAdmin) {
-          navigate('/superadmin', { replace: true });
+          navigate('/fitpat/login', { replace: true });
           return;
         }
+        
+        // Find member data to check gymId and needsPasswordReset
         const q = query(collection(db, 'members'), where('email', '==', currentUser.email));
         const snap = await getDocs(q);
+        
         if (!snap.empty) {
           const memberData = snap.docs[0].data();
+          const userGymId = memberData.gymId;
+          
+          if (!userGymId) {
+            setError('Your account is not associated with any gym.');
+            return;
+          }
+
+          setTenant(userGymId);
+
+          if (memberData.needsPasswordReset) {
+            navigate(`/fitpat/partner/setup-password`, { replace: true });
+            return;
+          }
+
           if (memberData.role && memberData.role !== 'Member') {
             navigate('/admin', { replace: true });
           } else {
             navigate('/member', { replace: true });
           }
         } else {
-          navigate('/admin', { replace: true });
+           setError('Could not find your gym profile.');
         }
       }
     };
     routeExistingUser();
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, isSuperAdmin, setTenant]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -45,42 +65,14 @@ export default function Login() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-        const superAdmins = ['admin@gym.com', 'abhijiththirutheri@gmail.com'];
-        if (superAdmins.includes(email.toLowerCase())) {
-           navigate('/superadmin');
-           return;
-        }
-        
-        // Check if user is in members collection
-        const q = query(collection(db, 'members'), where('email', '==', email));
-        const snap = await getDocs(q);
-        
-        if (!snap.empty) {
-          const memberData = snap.docs[0].data();
-          const role = memberData.role || 'Member';
-          if (role !== 'Member') {
-            // Staff / Custom roles go to admin
-            navigate('/admin');
-          } else {
-            // Regular members go to member portal
-            navigate('/member');
-          }
-        } else {
-          // If not in members collection but logged in (legacy staff), default to admin
-          navigate('/admin');
-        }
+      // routeExistingUser will handle the redirect once currentUser updates
     } catch (err) {
-      if (err.message === 'unauthorized') {
-        setError('Email not found. Please contact an administrator.');
-      } else {
-        setError('Invalid credentials.');
-      }
-    } finally {
+      setError('Invalid email or password.');
       setLoading(false);
     }
   };
 
-  const accent = '#ff4444';
+  const accent = '#10b981'; // FitPat Green branding
 
   return (
     <div className="login-container" style={{
@@ -92,18 +84,20 @@ export default function Login() {
 
         {/* ── Brand header ── */}
         <div className="login-brand-header">
-          <div className="login-brand-icon" style={{ background: `rgba(255, 68, 68, 0.22)`, color: '#ff4444' }}>
-            <Dumbbell size={32} />
+          <div className="login-brand-icon" style={{ background: `${accent}22`, color: accent }}>
+            <Activity size={32} />
           </div>
 
           <div className="login-brand-name">
-            Super <span style={{ color: '#ff4444' }}>ADMIN</span>
+            <span style={{ color: accent }}>Fit</span>Pat
           </div>
 
           <div className="login-portal-label">
             <LogIn size={14} />
-            Admin Sign In
+            Unified Gym Partner Login
           </div>
+
+          <div className="login-tagline">Log in to manage your gym or access your member profile.</div>
         </div>
 
         {/* ── Form ── */}
@@ -136,9 +130,9 @@ export default function Login() {
             type="submit"
             className="btn btn-primary w-full"
             disabled={loading}
-            style={{ background: `linear-gradient(135deg, #ff4444, #ff4444cc)` }}
+            style={{ background: `linear-gradient(135deg, ${accent}, #059669)` }}
           >
-            {loading ? 'Please wait…' : 'Sign In'}
+            {loading ? 'Authenticating...' : 'Sign In to FitPat'}
           </button>
         </form>
 

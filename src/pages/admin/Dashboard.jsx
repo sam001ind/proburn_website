@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
+import { useTenant } from '../../context/TenantContext';
 import { db } from '../../firebase';
 import ClockWidget from '../../components/ClockWidget';
 import './Admin.css';
@@ -16,6 +17,7 @@ export default function Dashboard() {
   
   const { currentUser } = useAuth();
   const { activeBranch } = useBranch();
+  const { activeGymId } = useTenant();
   const [userRoleData, setUserRoleData] = useState(null);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function Dashboard() {
         const memberData = memberSnap.docs[0].data();
         const roleName = memberData.role || 'Member';
         
-        const qRole = query(collection(db, 'roles'), where('name', '==', roleName));
+        const qRole = query(collection(db, 'roles'), where('name', '==', roleName), where('gymId', '==', activeGymId));
         onSnapshot(qRole, (roleSnap) => {
           if (!roleSnap.empty) {
             setUserRoleData({ name: roleName, ...roleSnap.docs[0].data() });
@@ -43,20 +45,20 @@ export default function Dashboard() {
       }
     });
 
-    if (!activeBranch) {
+    if (!activeBranch || !activeGymId) {
       setMembers([]);
       setTransactions([]);
       setAttendance([]);
       return;
     }
 
-    const unsubMembers = onSnapshot(query(collection(db, 'members'), where('branchId', '==', activeBranch.id)), (snapshot) => {
+    const unsubMembers = onSnapshot(query(collection(db, 'members'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setMembers(snapshot.docs.map(doc => doc.data()));
     });
-    const unsubTx = onSnapshot(query(collection(db, 'transactions'), where('branchId', '==', activeBranch.id)), (snapshot) => {
+    const unsubTx = onSnapshot(query(collection(db, 'transactions'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setTransactions(snapshot.docs.map(doc => doc.data()));
     });
-    const unsubAtt = onSnapshot(query(collection(db, 'attendance'), where('branchId', '==', activeBranch.id)), (snapshot) => {
+    const unsubAtt = onSnapshot(query(collection(db, 'attendance'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id)), (snapshot) => {
       setAttendance(snapshot.docs.map(doc => doc.data()));
     });
     

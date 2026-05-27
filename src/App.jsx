@@ -24,18 +24,30 @@ import PageEditor from './pages/admin/website/PageEditor';
 import NavigationEditor from './pages/admin/website/NavigationEditor';
 import ThemeEditor from './pages/admin/website/ThemeEditor';
 import ClockInSettings from './pages/admin/settings/ClockInSettings';
+import SuperAdminLayout from './pages/superadmin/SuperAdminLayout';
+import SuperDashboard from './pages/superadmin/SuperDashboard';
+import FitPatLogin from './pages/FitPatLogin';
+import SetupPassword from './pages/SetupPassword';
 import { AuthProvider } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { TenantProvider } from './context/TenantContext';
 
 function App() {
   return (
+    <TenantProvider>
     <AuthProvider>
       <BranchProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
-          <Route path="/" element={<DynamicPage isHome={true} />} />
-          <Route path="/login" element={<Login />} />
+          {/* SaaS Admin Portal routes */}
+          <Route path="/fitpat/login" element={<Login />} />
+
+          {/* Unified FitPat Login */}
+          <Route path="/fitpat/partner/login" element={<FitPatLogin />} />
+          <Route path="/fitpat/partner/setup-password" element={<SetupPassword />} />
+
+          <Route path="/" element={<Navigate to="/fitpat/partner/login" replace />} />
           
           <Route path="/member" element={
             <ProtectedRoute>
@@ -47,6 +59,15 @@ function App() {
             <Route path="health" element={<MemberHealth />} />
             <Route path="attendance" element={<MemberAttendance />} />
             <Route path="billing" element={<MemberBilling />} />
+          </Route>
+
+          <Route path="/superadmin" element={
+            <ProtectedRoute>
+              <SuperAdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<SuperDashboard />} />
           </Route>
 
           <Route path="/admin" element={
@@ -78,11 +99,13 @@ function App() {
             </Route>
           </Route>
           {/* Dynamic Pages Fallback (must be at the bottom) */}
-          <Route path="/:slug" element={<DynamicPage />} />
+          <Route path="/:gymSlug" element={<DynamicPage isHome={true} />} />
+          <Route path="/:gymSlug/:pageSlug" element={<DynamicPage />} />
         </Routes>
       </BrowserRouter>
       </BranchProvider>
     </AuthProvider>
+    </TenantProvider>
   );
 }
 

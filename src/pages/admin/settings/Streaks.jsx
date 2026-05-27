@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Target, Save, Trash2, Plus } from 'lucide-react';
-import { db } from '../../../firebase';
+import { db } from '../../../firebase'; 
+import { useTenant } from '../../../context/TenantContext';
 
 export default function Streaks() {
+  const { activeGymId } = useTenant();
   const [gymConfig, setGymConfig] = useState({ streaks: [] });
   const [loading, setLoading] = useState(false);
 

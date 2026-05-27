@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy, where } from "firebase/firestore";;
 import { Calendar as CalendarIcon, Trash2, Plus } from 'lucide-react';
-import { db } from '../../../firebase';
+import { db } from '../../../firebase'; 
+import { useTenant } from '../../../context/TenantContext';
 
 export default function Holidays() {
+  const { activeGymId } = useTenant();
   const [holidays, setHolidays] = useState([]);
   const [newDate, setNewDate] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'holidays'), orderBy('date', 'asc'));
+    const q = query(collection(db, 'holidays'), where('gymId', '==', activeGymId), orderBy('date', 'asc'));
     const unsubHolidays = onSnapshot(q, (snapshot) => {
       setHolidays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -22,10 +24,10 @@ export default function Holidays() {
     if (!newDate || !newDesc) return;
     setLoading(true);
     try {
-      await addDoc(collection(db, 'holidays'), {
+      await addDoc(collection(db, 'holidays'), { gymId: activeGymId, 
         date: newDate,
         description: newDesc
-      });
+       });
       setNewDate('');
       setNewDesc('');
     } catch (err) {

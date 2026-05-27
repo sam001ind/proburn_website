@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { List, Save, Trash2, Plus } from 'lucide-react';
-import { db } from '../../../firebase';
+import { db } from '../../../firebase'; 
+import { useTenant } from '../../../context/TenantContext';
 
 export default function Plans() {
+  const { activeGymId } = useTenant();
   const [gymConfig, setGymConfig] = useState({ plans: [] });
   const [loading, setLoading] = useState(false);
 

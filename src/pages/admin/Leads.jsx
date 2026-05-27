@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where } from "firebase/firestore";;
 import { db } from '../../firebase';
 import { UserPlus, Trash2, Edit2, CheckCircle, Phone, Mail, Tag, Clock, MessageSquare } from 'lucide-react';
-import { useBranch } from '../../context/BranchContext';
+import { useBranch } from '../../context/BranchContext'; 
+import { useTenant } from '../../context/TenantContext';
 import Modal from '../../components/Modal';
 import './Admin.css';
 
@@ -16,6 +17,7 @@ const STATUS_COLORS = {
 };
 
 export default function Leads() {
+  const { activeGymId } = useTenant();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All');
@@ -44,7 +46,7 @@ export default function Leads() {
       setLoading(false);
       return;
     }
-    const unsub = onSnapshot(collection(db, 'leads'), (snap) => {
+    const unsub = onSnapshot(query(collection(db, 'leads'), where('gymId', '==', activeGymId), where('gymId', '==', activeGymId)), (snap) => {
       let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       data = data.filter(l => l.branchId === activeBranch.id);
       data.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
@@ -104,7 +106,7 @@ export default function Leads() {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays);
 
-      await addDoc(collection(db, 'members'), {
+      await addDoc(collection(db, 'members'), { gymId: activeGymId, 
         memberId,
         name: memberForm.name,
         email: memberForm.email,
@@ -122,7 +124,7 @@ export default function Leads() {
         status: 'Active',
         branchId: convertingLead.branchId || activeBranch.id,
         createdAt: serverTimestamp(),
-      });
+       });
 
       // Mark lead as converted
       await updateDoc(doc(db, 'leads', convertingLead.id), {

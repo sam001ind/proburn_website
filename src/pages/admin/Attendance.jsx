@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { collection, onSnapshot, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useBranch } from '../../context/BranchContext';
+import { useBranch } from '../../context/BranchContext'; 
+import { useTenant } from '../../context/TenantContext';
 import './Admin.css';
 import './Attendance.css';
 
 export default function Attendance() {
+  const { activeGymId } = useTenant();
   const [searchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
 
@@ -24,7 +26,7 @@ export default function Attendance() {
       setLoading(false);
       return;
     }
-    const qAtt = query(collection(db, 'attendance'), where('branchId', '==', activeBranch.id));
+    const qAtt = query(collection(db, 'attendance'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id));
     const unsub = onSnapshot(qAtt, (snap) => {
       const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       logs.sort((a, b) => {
@@ -41,28 +43,28 @@ export default function Attendance() {
   const simulateScan = async () => {
     if (!activeBranch) return;
     const names = ['Alex Johnson', 'Sarah Williams', 'Mike Chen', 'Emily Davis'];
-    await addDoc(collection(db, 'attendance'), {
+    await addDoc(collection(db, 'attendance'), { gymId: activeGymId, 
       memberId:   'M-' + Math.floor(1000 + Math.random() * 9000),
       memberName: names[Math.floor(Math.random() * names.length)],
       type:       Math.random() > 0.5 ? 'Check-In' : 'Check-Out',
       timestamp:  serverTimestamp(),
       method:     'Biometric Scanner 1',
       branchId:   activeBranch.id
-    });
+     });
   };
 
   const manualCheckIn = async () => {
     if (!activeBranch) return;
     const name = prompt('Enter Member Name to Check-In:');
     if (!name) return;
-    await addDoc(collection(db, 'attendance'), {
+    await addDoc(collection(db, 'attendance'), { gymId: activeGymId, 
       memberId:   'Manual-' + Math.floor(1000 + Math.random() * 9000),
       memberName: name,
       type:       'Check-In',
       timestamp:  serverTimestamp(),
       method:     'Manual Entry',
       branchId:   activeBranch.id
-    });
+     });
   };
 
   /* Active members */

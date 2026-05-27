@@ -3,12 +3,14 @@ import { useSearchParams, useOutletContext, useLocation } from 'react-router-dom
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useBranch } from '../../context/BranchContext';
+import { useBranch } from '../../context/BranchContext'; 
+import { useTenant } from '../../context/TenantContext';
 import Modal from '../../components/Modal';
 import ImageUpload from '../../components/ImageUpload';
 import './Admin.css';
 
 export default function Members() {
+  const { activeGymId } = useTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.get('filter');
   const location = useLocation();
@@ -73,13 +75,13 @@ export default function Members() {
       setLoading(false);
       return;
     }
-    const qMembers = query(collection(db, 'members'), where('branchId', '==', activeBranch.id));
+    const qMembers = query(collection(db, 'members'), where('gymId', '==', activeGymId), where('branchId', '==', activeBranch.id));
     const unsubMembers = onSnapshot(qMembers, (snapshot) => {
       const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllMembers(membersData.filter(m => !m.role || m.role === 'Member'));
       setLoading(false);
     });
-    const unsubRoles = onSnapshot(collection(db, 'roles'), (snapshot) => {
+    const unsubRoles = onSnapshot(query(collection(db, 'roles'), where('gymId', '==', activeGymId), where('gymId', '==', activeGymId)), (snapshot) => {
       const rolesData = snapshot.docs.map(doc => doc.data());
       setRoles(rolesData);
     });
@@ -97,7 +99,7 @@ export default function Members() {
       { memberId: 'M-1048', name: 'Robert Moore', plan: 'Elite', status: 'Active', joined: 'Feb 2024', expiry: 1 },
     ];
     for (const m of mockMembers) {
-      await addDoc(collection(db, 'members'), m);
+      await addDoc(collection(db, 'members'), { ...m, gymId: activeGymId });
     }
     alert('Mock members added to Firebase!');
   };
@@ -179,7 +181,7 @@ export default function Members() {
           weightHistory: formData.weight ? [{ weight: formData.weight, date: new Date().toISOString() }] : [],
           branchId: activeBranch.id
         };
-        await addDoc(collection(db, 'members'), newMember);
+        await addDoc(collection(db, 'members'), { ...newMember, gymId: activeGymId });
       }
       setIsModalOpen(false);
       setEditingMemberId(null);

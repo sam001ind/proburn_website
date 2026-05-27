@@ -83,7 +83,7 @@ const PreviewNavbarAndHero = ({ theme }) => {
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
           {[1,2,3].map(i => (
             <div key={i} style={{ background: theme?.bgColor || 'var(--bg)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: `${theme?.primaryColor}22` || 'rgba(255,0,0,0.1)', color: theme?.primaryColor || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: theme?.primaryColor ? `${theme.primaryColor}22` : 'rgba(255,0,0,0.1)', color: theme?.primaryColor || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <Dumbbell size={20} />
               </div>
               <h3 style={{ fontSize: '1.2rem', color: theme?.bgColor === '#ffffff' ? '#000' : '#fff', marginBottom: '0.5rem' }}>Feature {i}</h3>

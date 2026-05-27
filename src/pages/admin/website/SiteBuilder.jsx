@@ -92,7 +92,6 @@ export default function SiteBuilder() {
   const [activeTab, setActiveTab] = useState('insert'); // 'insert', 'properties', 'pages', 'themes'
   const [activePageId, setActivePageId] = useState(null);
   const [pages, setPages] = useState([]);
-  const [navLinks, setNavLinks] = useState([]);
   const [theme, setTheme] = useState({ logoText: 'PROBURN', primaryColor: '#ff4444', bgColor: '#111111', surfaceColor: '#1a1a1a' });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

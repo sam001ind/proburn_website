@@ -90,16 +90,6 @@ export default function AdminLayout() {
       badge: newLeadsCount > 0 ? newLeadsCount : null
     },
     { 
-      id: 'website', 
-      icon: <Home size={20} />, 
-      label: 'Website Builder',
-      subMenus: [
-        { path: '/admin/website/pages',      label: '📄 Pages' },
-        { path: '/admin/website/navigation', label: '🔗 Navigation' },
-        { path: '/admin/website/theme',      label: '🎨 Theme Settings' },
-      ]
-    },
-    { 
       id: 'settings', 
       icon: <Settings size={20} />, 
       label: 'Settings',
@@ -125,7 +115,7 @@ export default function AdminLayout() {
   // RBAC Filtering logic for sidebar
   const visibleNavItems = navItems.filter(item => {
     // Hide Website Builder completely if running as native mobile app
-    if (Capacitor.isNativePlatform() && item.id === 'website') return false;
+    
     
     if (userRoleData?.name === 'Super Admin' || userRoleData?.name === 'Admin') return true;
     return userRoleData?.permissions?.menus?.includes(item.id);

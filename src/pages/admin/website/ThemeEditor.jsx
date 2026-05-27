@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { useTenant } from '../../../context/TenantContext';
+import { useParams } from 'react-router-dom';
 import { Save, Palette, Image as ImageIcon } from 'lucide-react';
+import WebsiteNav from './WebsiteNav';
 
 const defaultTheme = {
   logoText: 'PROBURN',
@@ -29,10 +30,10 @@ const PREDEFINED_PALETTES = [
 ];
 
 export default function ThemeEditor() {
+  const { gymId: activeGymId } = useParams();
   const [theme, setTheme] = useState(defaultTheme);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { activeGymId } = useTenant();
 
   useEffect(() => {
     const fetchTheme = async () => {
@@ -69,10 +70,11 @@ export default function ThemeEditor() {
 
   return (
     <div className="admin-page-container">
+      <WebsiteNav gymId={activeGymId} />
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Theme Settings</h1>
-          <p className="admin-page-subtitle">Manage global branding and colors</p>
+          <p className="admin-page-subtitle">Customize the look and feel of your gym's website</p>
         </div>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           <Save size={16} style={{ marginRight: '0.4rem' }} /> {saving ? 'Saving...' : 'Save Theme'}

@@ -4,6 +4,7 @@ import { db, secondaryAuth } from '../../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import Modal from '../../components/Modal';
 import { Plus, Building2, User, Globe, Edit } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function SuperDashboard() {
   const [gyms, setGyms] = useState([]);
@@ -142,7 +143,10 @@ export default function SuperDashboard() {
               )}
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Status: {gym.status}</span>
             </div>
-            <a href={`/proburn_website/${gym.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ marginTop: '1rem', width: '100%', textAlign: 'center' }}>View Website</a>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <Link to={`/superadmin/website/${gym.slug}/pages`} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>Build Website</Link>
+              <a href={`/${gym.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</a>
+            </div>
           </div>
         ))}
       </div>

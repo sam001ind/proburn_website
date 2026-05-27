@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { useTenant } from '../../../context/TenantContext';
+import { useParams } from 'react-router-dom';
 import { Save, Plus, Trash2, Link as LinkIcon, MoveUp, MoveDown } from 'lucide-react';
+import WebsiteNav from './WebsiteNav';
 
 export default function NavigationEditor() {
+  const { gymId: activeGymId } = useParams();
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { activeGymId } = useTenant();
 
   useEffect(() => {
     const fetchNav = async () => {
@@ -96,10 +97,11 @@ export default function NavigationEditor() {
 
   return (
     <div className="admin-page-container">
+      <WebsiteNav gymId={activeGymId} />
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Navigation Menu</h1>
-          <p className="admin-page-subtitle">Manage the header navigation links for your website</p>
+          <p className="admin-page-subtitle">Build the main menu for your gym's website</p>
         </div>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           <Save size={16} style={{ marginRight: '0.4rem' }} /> {saving ? 'Saving...' : 'Save Navigation'}

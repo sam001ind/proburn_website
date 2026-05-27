@@ -4,6 +4,7 @@ import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Settings, Type, Image as ImageIcon, Layout, Grid, Video, Columns, Maximize2, Minus, MousePointerClick, ChevronDown, GripVertical } from 'lucide-react';
 import Modal from '../../../components/Modal';
+import WebsiteNav from './WebsiteNav';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -70,7 +71,7 @@ const SortableSection = ({ sec, index, onEdit, onRemove }) => {
 };
 
 export default function PageEditor() {
-  const { pageId } = useParams();
+  const { pageId, gymId: activeGymId } = useParams();
   const navigate = useNavigate();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -147,9 +148,10 @@ export default function PageEditor() {
 
   return (
     <div className="admin-page-container">
+      <WebsiteNav gymId={activeGymId} />
       <div className="admin-page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="btn btn-outline" style={{ padding: '0.5rem' }} onClick={() => navigate('/admin/website/pages')}>
+          <button className="btn btn-outline" style={{ padding: '0.5rem' }} onClick={() => navigate(`/superadmin/website/${activeGymId}/pages`)}>
             <ArrowLeft size={16} />
           </button>
           <div>

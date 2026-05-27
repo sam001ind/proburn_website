@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { FileText, Plus, Edit, Trash2, Home, ExternalLink } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import Modal from '../../../components/Modal';
-import { useTenant } from '../../../context/TenantContext';
+import WebsiteNav from './WebsiteNav';
 
 export default function PagesList() {
+  const { gymId: activeGymId } = useParams();
   const [pages, setPages] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ title: '', slug: '', isHome: false });
   const navigate = useNavigate();
-  const { activeGymId, activeGymData } = useTenant();
 
   useEffect(() => {
     if (!activeGymId) return;
@@ -54,6 +54,7 @@ export default function PagesList() {
 
   return (
     <div className="admin-page-container">
+      <WebsiteNav gymId={activeGymId} />
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Pages</h1>

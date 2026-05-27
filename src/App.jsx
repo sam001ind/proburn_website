@@ -68,6 +68,13 @@ function App() {
           }>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<SuperDashboard />} />
+            <Route path="website/:gymId">
+              <Route index element={<Navigate to="pages" replace />} />
+              <Route path="pages" element={<PagesList />} />
+              <Route path="pages/:pageId" element={<PageEditor />} />
+              <Route path="navigation" element={<NavigationEditor />} />
+              <Route path="theme" element={<ThemeEditor />} />
+            </Route>
           </Route>
 
           <Route path="/admin" element={
@@ -82,13 +89,7 @@ function App() {
             <Route path="billing" element={<Billing />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="leads" element={<Leads />} />
-            <Route path="website">
-              <Route index element={<Navigate to="pages" replace />} />
-              <Route path="pages" element={<PagesList />} />
-              <Route path="pages/:pageId" element={<PageEditor />} />
-              <Route path="navigation" element={<NavigationEditor />} />
-              <Route path="theme" element={<ThemeEditor />} />
-            </Route>
+
             <Route path="settings">
               <Route index element={<Navigate to="clockin" replace />} />
               <Route path="clockin"  element={<ClockInSettings />} />

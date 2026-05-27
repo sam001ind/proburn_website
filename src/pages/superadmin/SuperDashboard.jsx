@@ -144,7 +144,7 @@ export default function SuperDashboard() {
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Status: {gym.status}</span>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              <Link to={`/superadmin/website/${gym.slug}/pages`} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>Build Website</Link>
+              <Link to={`/superadmin/website/${gym.slug}/builder`} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>Build Website</Link>
               <button onClick={() => window.open(`/${gym.slug}`, '_blank')} className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>View Site</button>
             </div>
           </div>

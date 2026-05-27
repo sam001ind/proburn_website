@@ -19,10 +19,7 @@ import Plans from './pages/admin/settings/Plans';
 import Roles from './pages/admin/Roles';
 import Leads from './pages/admin/Leads';
 import Branches from './pages/admin/settings/Branches';
-import PagesList from './pages/admin/website/PagesList';
-import PageEditor from './pages/admin/website/PageEditor';
-import NavigationEditor from './pages/admin/website/NavigationEditor';
-import ThemeEditor from './pages/admin/website/ThemeEditor';
+import SiteBuilder from './pages/admin/website/SiteBuilder';
 import ClockInSettings from './pages/admin/settings/ClockInSettings';
 import SuperAdminLayout from './pages/superadmin/SuperAdminLayout';
 import SuperDashboard from './pages/superadmin/SuperDashboard';
@@ -78,11 +75,8 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<SuperDashboard />} />
             <Route path="website/:gymId">
-              <Route index element={<Navigate to="pages" replace />} />
-              <Route path="pages" element={<PagesList />} />
-              <Route path="pages/:pageId" element={<PageEditor />} />
-              <Route path="navigation" element={<NavigationEditor />} />
-              <Route path="theme" element={<ThemeEditor />} />
+              <Route index element={<Navigate to="builder" replace />} />
+              <Route path="builder" element={<SiteBuilder />} />
             </Route>
           </Route>
 

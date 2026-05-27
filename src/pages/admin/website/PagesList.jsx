@@ -93,14 +93,14 @@ export default function PagesList() {
                       </div>
                     </td>
                     <td>
-                      <a href={`/${activeGymData?.slug || 'proburn'}${page.isHome ? '' : `/${page.slug}`}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
+                      <a href={`/${activeGymId}${page.isHome ? '' : `/${page.slug}`}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}>
                         /{page.isHome ? '' : page.slug} <ExternalLink size={12} />
                       </a>
                     </td>
                     <td><span className="badge" style={{ background: 'rgba(46, 204, 113, 0.2)', color: '#2ecc71' }}>Published</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="btn btn-outline" style={{ padding: '0.4rem' }} onClick={() => navigate(`/admin/website/pages/${page.id}`)}>
+                        <button className="btn btn-outline" style={{ padding: '0.4rem' }} onClick={() => navigate(`/superadmin/website/${activeGymId}/pages/${page.id}`)}>
                           <Edit size={14} />
                         </button>
                         <button className="btn btn-outline" style={{ padding: '0.4rem', color: '#ff4444', borderColor: 'rgba(255, 68, 68, 0.2)' }} onClick={() => deletePage(page.id)}>
